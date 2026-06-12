@@ -3,7 +3,7 @@
 set -e
 ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
 PY="$ROOT/.venv/bin/python"
-[ -x "$PY" ] || { echo "no venv at $PY" >&2; exit 1; }
+[ -x "$PY" ] || PY="python3"   # CI / no-venv fallback
 case "${1:-}" in
   --describe) echo "Kalshi — event-contract positions + cash (official v2 API)"; exit 0 ;;
   --kind) echo "prediction-market"; exit 0 ;;

@@ -138,7 +138,7 @@ class TestSelfDescribingCLI(unittest.TestCase):
         """`sciqnt --help` is the discovery contract the skill points at —
         a surface missing from it is invisible to every agent."""
         out = subprocess.run(
-            [str(ROOT / ".venv/bin/python"),
+            [sys.executable,
              str(ROOT / "bin/sciqnt-aggregated.py"), "--help"],
             capture_output=True, text=True, timeout=30).stdout
         for flag in ("--once", "--account", "--tab", "--history",
