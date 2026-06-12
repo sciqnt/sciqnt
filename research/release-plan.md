@@ -136,8 +136,14 @@ the repo (FINDINGS, SKILL, manifests), derive every surface from it.**
    generator), PR template.
 3. **CI** (1 session): test matrix (3.11–3.13 × mac/linux), conformance
    job, personal-data grep, lint. Green BEFORE the remote exists.
-4. **⛔ GitHub org + push**: `sciqnt` org, repo public, topics, social
-   image, README per §3b.
+4. **✅ GitHub org + push — DONE 2026-06-12**: `sciqnt` org created by
+   owner; `sciqnt/sciqnt` public at https://github.com/sciqnt/sciqnt with
+   FRESH history (single root commit, `DavideGCosta@users.noreply` author;
+   local pre-publish history stays on the never-pushed `private-history`
+   branch). Topics set (portfolio-tracker, degiro, quant, local-first,
+   llm-agents, agent-native, tui, python, point-in-time, finance);
+   issues + discussions enabled; launch README with demo-mode figures.
+   Still to do here: social preview image (needs the GitHub UI).
 5. **PyPI**: reserve ALL `sciqnt-*` names as pending publishers (also
    anti-typosquatting), Trusted Publishing workflow, tag → publish. First
    tags: `sciqnt/v0.1.0` + the contract + the proven bundles.
