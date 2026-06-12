@@ -1,0 +1,38 @@
+# Per-package release via PyPI Trusted Publishing (no tokens anywhere).
+# Tag a package as  <dist-name>/v<version>  (e.g. sciqnt-degiro/v0.1.0)
+# and this builds + publishes exactly that package. Independent bundle
+# cadence; the contract releases the same way, deliberately less often.
+name: release
+on:
+  push:
+    tags: ["sciqnt*/v*", "sciqnt/v*"]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      pkgdir: ${{ steps.locate.outputs.pkgdir }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - id: locate
+        name: Resolve the tagged distribution to its directory
+        run: |
+          DIST="${GITHUB_REF_NAME%%/v*}"
+          DIR=$(grep -rl "^name = \"$DIST\"" core/*/pyproject.toml modules/*/pyproject.toml | xargs -n1 dirname | head -1)
+          [ -n "$DIR" ] || { echo "no package named $DIST"; exit 1; }
+          echo "pkgdir=$DIR" >> "$GITHUB_OUTPUT"
+      - run: pip install build && python -m build "${{ steps.locate.outputs.pkgdir }}"
+      - uses: actions/upload-artifact@v4
+        with: { name: dist, path: "${{ steps.locate.outputs.pkgdir }}/dist/" }
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions: { id-token: write }     # Trusted Publishing (OIDC)
+    steps:
+      - uses: actions/download-artifact@v4
+        with: { name: dist, path: dist/ }
+      - uses: pypa/gh-action-pypi-publish@release/v1   # PEP 740 attestations by default

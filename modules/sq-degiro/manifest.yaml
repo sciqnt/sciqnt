@@ -1,0 +1,36 @@
+# sq-degiro — unit manifest (machine-readable declarations)
+name: sq-degiro
+kind: source                 # source | compute | action
+risk_tier: read              # read-only; no execution (either flavour)
+status: proof                # proof | conformant ; value proven, not yet contract-conformant
+schema_version: 0            # canonical schema not yet formalized (see ../../FOUNDATION.md)
+identifiers: [ISIN]
+broker: Degiro (flatexDEGIRO)
+flavours:                    # declared, not assumed; one interface, multiple ingestion paths
+  file-csv:                  # default — simplest, ToS-clean, zero-credential
+    risk: low
+    inputs: [transactions.csv, account.csv]
+    dependencies: []         # stdlib only
+    code: src/sq_degiro/pnl.py
+    status: proven (matches broker to the cent)
+  api:                       # LIVE — current positions/cash + history sync
+    risk: reverse-engineered # unofficial; against Degiro ToS; at-your-own-risk
+    needs_credentials: true  # local-only; macOS Keychain (setup_creds.py), .env fallback
+    dependencies: [degiro-connector, "wrapt<2", protobuf, keyring]   # wrapt/protobuf undeclared by the lib
+    code: src/sq_degiro/live.py
+    status: live-verified — real-credentials run reconciled to the cent vs the Degiro screen (2026-05-28, FINDINGS)
+  browser:                   # last resort, not built
+    risk: reverse-engineered
+    status: not-built
+capabilities:
+  read:
+    - read_transactions      # csv
+    - read_positions         # csv (derived) + api (live)
+    - realized_pnl           # csv
+    - reconcile_cash         # csv
+    - live_positions         # api
+    - live_cash              # api
+    - sync_history           # api — `sync` downloads the same two CSV reports the web UI exports
+  execute: []                # none — execution is a separate, higher trust tier (not implemented)
+known_quirks: FINDINGS.md
+license: MIT

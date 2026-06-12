@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sciqnt-performance"
+version = "0.0.1"
+description = "sq-performance — return analytics over a canonical Transaction stream"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+dependencies = [
+    "sciqnt-schema",
+]
+
+[tool.setuptools]
+packages = ["sq_performance"]
+
+[tool.setuptools.package-dir]
+sq_performance = "."
+
+[tool.uv.sources]
+    "sciqnt-schema" = { workspace = true }

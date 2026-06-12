@@ -1,0 +1,23 @@
+# sq-demo — unit manifest
+name: sq-demo
+kind: demo
+risk_tier: none              # synthetic data only; no credentials, no network
+status: v1
+schema_version: 0
+identifiers: [ticker]        # fictional (SWRD/SQTC/SBND) — resolve nowhere, by design
+broker: demo
+asset_classes: [ETF, STOCK]
+flavours:
+  synthetic:
+    risk: none
+    needs_credentials: false
+    code: src/sq_demo/portfolio.py
+    status: v1 — deterministic seeded walks + scripted history; offline
+capabilities:
+  read:
+    - live_positions         # seeded-walk MTM at any date
+    - transaction_history    # the scripted canonical stream
+notes: >
+  The public-figures source: first-run experience, screenshots and docs all
+  render from this bundle. Activates only while no real account is
+  connected (platform void-fill; config demo_mode auto|on|off).

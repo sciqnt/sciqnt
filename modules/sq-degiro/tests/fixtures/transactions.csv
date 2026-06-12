@@ -1,0 +1,4 @@
+Date,Time,Product,ISIN,Reference exchange,Venue,Quantity,Price,,Local value,,Value EUR,Exchange rate,AutoFX Fee,Transaction and/or third party fees EUR,Total EUR,Order ID,
+20-03-2024,11:00,OpenCo,TEST0000002,XAMS,XAMS,5,"20,0000",EUR,"-100,00",EUR,"-100,00",,"0,00","0,00","-100,00",order3,
+15-02-2024,10:00,TestCo,TEST0000001,XAMS,XAMS,-10,"12,0000",EUR,"120,00",EUR,"120,00",,"0,00","0,00","120,00",,order2
+14-01-2024,09:00,TestCo,TEST0000001,XAMS,XAMS,10,"10,0000",EUR,"-100,00",EUR,"-100,00",,"0,00","0,00","-100,00",,order1

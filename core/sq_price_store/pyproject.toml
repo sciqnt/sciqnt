@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sciqnt-price-store"
+version = "0.0.1"
+description = "sq-price-store — the local, append-only, bitemporal price archive"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+dependencies = []
+
+[tool.setuptools]
+packages = ["sq_price_store"]
+
+[tool.setuptools.package-dir]
+sq_price_store = "."

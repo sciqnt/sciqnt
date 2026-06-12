@@ -1,0 +1,26 @@
+# sq-tiingo — unit manifest
+name: sq-tiingo
+kind: source
+risk_tier: read
+status: proof
+flavours:
+  api:
+    risk: official           # documented REST API, free Starter tier
+    dependencies: []         # stdlib only
+schema_version: 0
+capabilities:
+  read:
+    - get_price              # EOD close (latest or asof) for US-listed symbols
+  execute: []
+inputs:
+  - ticker                   # plain US-style symbol (AAPL, BRK-B); NOT .L/.AS/^/=X
+  - api_token                # BYO free key: keychain sq-tiingo/api_token or TIINGO_API_KEY
+dependencies: []             # stdlib only
+caveats: >
+  Free tier: 500 unique symbols/mo, 50 req/hr, 1k/day; license "internal
+  use only" (personal use OK, redistribution not). US & Chinese listings
+  only — no European venue symbols. EOD only (no intraday). Series is the
+  AS-TRADED raw close (not split-adjusted; Yahoo's is) — fine for the
+  fallback role, declared in FINDINGS.
+known_quirks: FINDINGS.md
+license: MIT

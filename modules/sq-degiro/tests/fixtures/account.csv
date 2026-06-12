@@ -1,0 +1,7 @@
+Date,Time,Value date,Product,ISIN,Description,FX,Change,,Balance,,Order Id
+25-03-2024,06:00,25-03-2024,SomeUSStock,TEST0000003,Dividendo,,USD,"5,00",USD,"5,00",
+20-03-2024,11:00,20-03-2024,OpenCo,TEST0000002,Compra 5 OpenCo,,EUR,"-100,00",EUR,"120,00",order3
+15-02-2024,10:00,15-02-2024,TestCo,TEST0000001,Venda 10 TestCo,,EUR,"120,00",EUR,"220,00",order2
+14-01-2024,09:00,14-01-2024,TestCo,TEST0000001,Compra 10 TestCo,,EUR,"-100,00",EUR,"100,00",order1
+12-01-2024,00:00,12-01-2024,,,Degiro Cash Sweep Transfer,,EUR,"30,00",EUR,"250,00",
+10-01-2024,00:00,10-01-2024,,,flatex Deposit,,EUR,"200,00",EUR,"200,00",

@@ -1,0 +1,15 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sciqnt-edgar"
+version = "0.0.1"
+description = "sciqnt context source unit — SEC EDGAR filings + fundamentals (official, free, no key)"
+readme = "FINDINGS.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+dependencies = []
+
+[tool.setuptools.packages.find]
+where = ["src"]

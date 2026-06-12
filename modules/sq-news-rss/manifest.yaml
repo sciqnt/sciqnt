@@ -1,0 +1,23 @@
+# sq-news-rss — unit manifest
+name: sq-news-rss
+kind: source
+risk_tier: read
+status: proof
+flavours:
+  api:
+    risk: unofficial         # public Yahoo RSS; can change without notice
+    dependencies: []         # stdlib only
+schema_version: 0
+capabilities:
+  read:
+    - get_news               # newest-first headlines for a ticker
+  execute: []
+inputs:
+  - ticker                   # Yahoo-style symbol incl. venue suffixes (.L/.AS)
+dependencies: []             # stdlib only
+caveats: >
+  Unofficial feed; no publish guarantees. News is CONTEXT only — never an
+  input to the deterministic money core. Items carry the source's publish
+  time as valid_at (fetch time when absent).
+known_quirks: FINDINGS.md
+license: MIT

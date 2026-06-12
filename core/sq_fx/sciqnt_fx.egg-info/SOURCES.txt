@@ -1,0 +1,8 @@
+__init__.py
+pyproject.toml
+./__init__.py
+sciqnt_fx.egg-info/PKG-INFO
+sciqnt_fx.egg-info/SOURCES.txt
+sciqnt_fx.egg-info/dependency_links.txt
+sciqnt_fx.egg-info/requires.txt
+sciqnt_fx.egg-info/top_level.txt

@@ -1,0 +1,9 @@
+Metadata-Version: 2.4
+Name: sciqnt-secrets
+Version: 0.0.1
+Summary: sq-secrets — shared credential substrate (NOT a connector)
+License: MIT
+Requires-Python: >=3.10
+Requires-Dist: keyring
+Requires-Dist: sciqnt-config
+Requires-Dist: sciqnt-tui

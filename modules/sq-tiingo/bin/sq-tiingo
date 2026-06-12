@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# sq-tiingo convenience wrapper — official EOD daily prices (free key).
+set -e
+BUNDLE="$(cd "$(dirname "$0")/.." && pwd)"
+ROOT="$(cd "$BUNDLE/../.." && pwd)"
+PY="$ROOT/.venv/bin/python"
+[ -x "$PY" ] || PY="$(command -v python3)"
+case "${1:-}" in
+  --describe) echo "Tiingo — official EOD daily prices, free key, US-listed symbols (price-chain fallback)"; exit 0 ;;
+  --kind) echo "pricing"; exit 0 ;;
+  --commands)
+    printf "auth\tStore your free Tiingo API key (verified before saving)\n"
+    printf "history\tFull daily history for a ticker\t<ticker>\n"
+    exit 0
+    ;;
+  auth) shift; exec "$PY" "$BUNDLE/setup_auth.py" "$@" ;;
+  history) shift; exec "$PY" "$BUNDLE/src/sq_tiingo/price.py" "$@" ;;
+  *) echo "usage: $(basename "$0") {auth|history <ticker>}" >&2; exit 1 ;;
+esac

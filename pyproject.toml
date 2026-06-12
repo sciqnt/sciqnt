@@ -1,0 +1,7 @@
+# sciqnt — uv workspace root (virtual: members only, no root package).
+# One lockfile, every core package + bundle a real distribution — the
+# release-framework design (research/release-framework.md §1) and the
+# composable doctrine's "units stand alone" made literal: anyone can
+# `pip install` ONE bundle and get exactly its declared contract deps.
+[tool.uv.workspace]
+members = ["core/sq_*", "modules/sq-*"]

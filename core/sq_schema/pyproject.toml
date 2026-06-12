@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sciqnt-schema"
+version = "0.0.1"
+description = "sq-schema — canonical cross-asset schema for sciqnt"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+dependencies = [
+    "pydantic",
+]
+
+[tool.setuptools]
+packages = ["sq_schema"]
+
+[tool.setuptools.package-dir]
+sq_schema = "."

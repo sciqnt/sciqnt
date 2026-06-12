@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sciqnt-skills"
+version = "0.0.1"
+description = "sq_skills — install sciqnt's reusable Agent Skills into a coding agent"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+dependencies = []
+
+[tool.setuptools]
+packages = ["sq_skills"]
+
+[tool.setuptools.package-dir]
+sq_skills = "."

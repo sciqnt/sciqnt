@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sciqnt-analytics"
+version = "0.0.1"
+description = "sq-analytics — pure compute aggregates over canonical entities"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+dependencies = [
+    "sciqnt-compute",
+    "sciqnt-schema",
+]
+
+[tool.setuptools]
+packages = ["sq_analytics"]
+
+[tool.setuptools.package-dir]
+sq_analytics = "."
+
+[tool.uv.sources]
+    "sciqnt-compute" = { workspace = true }
+    "sciqnt-schema" = { workspace = true }

@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sciqnt-kalshi"
+version = "0.0.1"
+description = "sciqnt Kalshi source unit — event-contract positions + cash via the official v2 REST API"
+readme = "FINDINGS.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+dependencies = [
+    "sciqnt-schema",
+    "sciqnt-secrets",
+    "sciqnt-tui",
+]
+
+[project.optional-dependencies]
+# LIVE (api) flavour — cryptography for RSA-PSS request signing; keyring for the
+# shared credential substrate. stdlib urllib handles the HTTP.
+live = ["cryptography", "keyring"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.uv.sources]
+"sciqnt-schema" = { workspace = true }
+"sciqnt-secrets" = { workspace = true }
+"sciqnt-tui" = { workspace = true }

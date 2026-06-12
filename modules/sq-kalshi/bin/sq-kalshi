@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+# sq-kalshi convenience wrapper.
+set -e
+ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
+PY="$ROOT/.venv/bin/python"
+[ -x "$PY" ] || { echo "no venv at $PY" >&2; exit 1; }
+case "${1:-}" in
+  --describe) echo "Kalshi — event-contract positions + cash (official v2 API)"; exit 0 ;;
+  --kind) echo "prediction-market"; exit 0 ;;
+  --commands)
+    printf "setup\tStore API key id + RSA private key (keychain/.env, verified)\n"
+    printf "live\tFetch open event contracts + cash\n"
+    exit 0
+    ;;
+  setup) shift; exec "$PY" "$ROOT/modules/sq-kalshi/setup_creds.py" "$@" ;;
+  live)  shift; exec "$PY" "$ROOT/modules/sq-kalshi/src/sq_kalshi/live.py" "$@" ;;
+  *) echo "usage: $(basename "$0") {setup|live} [args]" >&2; exit 1 ;;
+esac

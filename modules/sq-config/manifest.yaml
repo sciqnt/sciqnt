@@ -1,0 +1,29 @@
+# sq-config — unit manifest (machine-readable declarations)
+name: sq-config
+kind: infra                  # NB: outside the source|compute|action triad —
+                             # a local user-config substrate the other units
+                             # read (display_currency, cost_basis_method, …).
+                             # See ../../FOUNDATION.md universal-unit model.
+risk_tier: read              # reads/writes the user's own local config file only
+status: proof                # value proven (settings wired); schema not formalized
+schema_version: 0
+flavours:
+  file-json:                 # only flavour — small JSON at the XDG config path
+    risk: low                # no network, no creds; user-owned, local-only
+    needs_credentials: false
+    inputs: [config.json]    # ~/.config/sciqnt/config.json (SQ_CONFIG_PATH override)
+    dependencies: []         # stdlib only (json, pathlib)
+    code: ../../core/sq_config/__init__.py   # substrate lives in core; this
+                                             # bundle is the CLI surface
+    status: proven — schema registry + auto-materialise + atomic writes, test-backed
+capabilities:
+  read:
+    - get_setting            # schema-defaulted reads (show.py)
+  write:
+    - set_setting            # validated, atomic writes (set.py)
+  execute: []                # none
+sovereignty:                 # P13/P15 — the user owns these settings
+  storage: local             # ~/.config/sciqnt/, never in-repo
+  custody: none              # no platform credential/data custody
+known_quirks: FINDINGS.md
+license: MIT

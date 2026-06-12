@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sciqnt-fx"
+version = "0.0.1"
+description = "sq-fx — FX rate access substrate"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+dependencies = [
+    "sciqnt-config",
+    "sciqnt-schema",
+]
+
+[tool.setuptools]
+packages = ["sq_fx"]
+
+[tool.setuptools.package-dir]
+sq_fx = "."
+
+[tool.uv.sources]
+    "sciqnt-config" = { workspace = true }
+    "sciqnt-schema" = { workspace = true }

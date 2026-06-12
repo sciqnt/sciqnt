@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+# sq-news-rss convenience wrapper — per-ticker headlines (no key).
+set -e
+BUNDLE="$(cd "$(dirname "$0")/.." && pwd)"
+ROOT="$(cd "$BUNDLE/../.." && pwd)"
+PY="$ROOT/.venv/bin/python"
+[ -x "$PY" ] || PY="$(command -v python3)"
+case "${1:-}" in
+  --describe) echo "Yahoo Finance RSS — latest headlines for a ticker (news context, no key)"; exit 0 ;;
+  --kind) echo "news"; exit 0 ;;
+  --commands)
+    printf "headlines\tLatest headlines for ticker(s)\t<ticker> [ticker ...]\n"
+    exit 0
+    ;;
+  headlines) shift; exec "$PY" "$BUNDLE/src/sq_news_rss/feed.py" "$@" ;;
+  *) echo "usage: $(basename "$0") headlines <ticker> [ticker ...]" >&2; exit 1 ;;
+esac

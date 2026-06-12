@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sciqnt-tui"
+version = "0.0.1"
+description = "sq-tui — shared TUI design substrate for sciqnt"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+dependencies = [
+    "prompt-toolkit",
+]
+
+[tool.setuptools]
+packages = ["sq_tui"]
+
+[tool.setuptools.package-dir]
+sq_tui = "."

@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+# sq-openfigi convenience wrapper — ISIN → ticker/listing metadata.
+set -e
+BUNDLE="$(cd "$(dirname "$0")/.." && pwd)"
+ROOT="$(cd "$BUNDLE/../.." && pwd)"
+PY="$ROOT/.venv/bin/python"
+[ -x "$PY" ] || PY="$(command -v python3)"
+case "${1:-}" in
+  --describe) echo "OpenFIGI — resolve ISIN to ticker / listing metadata (identifier spine)"; exit 0 ;;
+  --kind) echo "reference"; exit 0 ;;
+  --commands)
+    printf "resolve\tResolve an ISIN to ticker + metadata\t<ISIN>\n"
+    exit 0
+    ;;
+  resolve) exec "$PY" "$BUNDLE/src/sq_openfigi/cli.py" "$@" ;;
+  *) echo "usage: $(basename "$0") resolve <ISIN>" >&2; exit 1 ;;
+esac

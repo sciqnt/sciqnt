@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+# sq-fx-ecb convenience wrapper — ECB EUR-cross FX rates as an FxRateProvider.
+set -e
+ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
+PY="$ROOT/.venv/bin/python"
+[ -x "$PY" ] || { echo "no venv at $PY — create with: python3 -m venv $ROOT/.venv" >&2; exit 1; }
+case "${1:-}" in
+  --describe) echo "ECB EUR-cross FX rate provider (daily + 90d history, public, no auth)"; exit 0 ;;
+  --kind) echo "fx"; exit 0 ;;
+  --commands)
+    printf "show\tFetch and print an FX rate\t<from_ccy> <to_ccy> [--asof YYYY-MM-DD]\n"
+    printf "refresh\tClear cache and refetch latest rates\n"
+    exit 0
+    ;;
+  show)    shift; exec "$PY" "$ROOT/modules/sq-fx-ecb/show.py"    "$@" ;;
+  refresh) shift; exec "$PY" "$ROOT/modules/sq-fx-ecb/refresh.py" "$@" ;;
+  *) echo "usage: $(basename "$0") {show|refresh} [args]" >&2; exit 1 ;;
+esac

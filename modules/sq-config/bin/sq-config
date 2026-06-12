@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+# sq-config bundle wrapper — user-level configuration for sciqnt.
+#   (bare) / set    → the full-screen interactive settings screen
+#                     (plain dump when piped — set.py checks interactivity)
+#   set KEY VALUE   → non-interactive validated write (scripts/agents)
+#   show            → plain dump — the script/agent-facing surface
+set -e
+ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
+PY="$ROOT/.venv/bin/python"
+[ -x "$PY" ] || { echo "no venv at $PY — create with: python3 -m venv $ROOT/.venv" >&2; exit 1; }
+case "${1:-}" in
+  --describe) echo "User config — display currency etc. (used by all modules)"; exit 0 ;;
+  --kind) echo "tools"; exit 0 ;;
+  --commands)
+    printf "set\tInteractive settings screen (or: set KEY VALUE, for scripts)\n"
+    printf "show\tPlain key/value dump — the script/agent-facing surface\n"
+    exit 0
+    ;;
+  show) shift; exec "$PY" "$ROOT/modules/sq-config/show.py" "$@" ;;
+  set)  shift; exec "$PY" "$ROOT/modules/sq-config/set.py"  "$@" ;;
+  "")   exec "$PY" "$ROOT/modules/sq-config/set.py" ;;   # bare → settings screen
+  *) echo "usage: $(basename "$0") [show|set [KEY VALUE]]" >&2; exit 1 ;;
+esac

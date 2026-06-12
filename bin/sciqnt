@@ -1,0 +1,171 @@
+#!/usr/bin/env bash
+# sciqnt — thin dispatcher across all bundles.
+#   no args                       -> aggregated portfolio view (the landing)
+#   sciqnt modules                -> interactive module-picker menu (drill-down)
+#   sciqnt --list                 -> list discovered modules
+#   sciqnt <module> <action> ...  -> forward to modules/sq-<module>/bin/sq-<module>
+# Each bundle stays self-contained; this script just routes.
+set -e
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+PY="$ROOT/.venv/bin/python"
+[ -x "$PY" ] || PY="python3"
+
+SQ_MARK_BEGIN="# >>> sciqnt >>>"
+SQ_MARK_END="# <<< sciqnt <<<"
+
+usage() {
+  cat <<EOF
+usage: sciqnt                          # interactive home: portfolio + actions
+       sciqnt --once                   # print the portfolio once and exit (dump)
+       sciqnt --asof YYYY-MM-DD        # PIT view at a historical date (dump)
+       sciqnt --history [RANGE|DAYS]   # history: 1D/5D/1M/6M/YTD/1Y/5Y/All or last-N-days stack (dump)
+       sciqnt --account LABEL          # one account's view, own base currency (dump)
+       sciqnt --tab NAME               # one tab only: summary/positions/exposure/news/flows/detailed
+       sciqnt --json                   # structured data (versioned schema) — the agent/integration surface
+       sciqnt insight add "TEXT"       # leave a note on the home screen (agent push channel)
+       sciqnt --fresh                  # bypass the 60s snapshot cache
+       sciqnt modules                  # interactive module-picker (drill-down)
+       sciqnt reset [broker] [--yes]   # wipe creds + caches (keeps your CSVs)
+       sciqnt config                   # interactive settings screen (set KEY VALUE / show for scripts)
+       sciqnt --list                   # list modules
+       sciqnt <module> <action> [args] # run a module command directly
+       sciqnt <module>                 # show that module's commands
+
+  sciqnt install [--dry-run]           # add bin/ to PATH via your shell rc
+  sciqnt uninstall                     # remove the sciqnt block from your rc
+
+modules are discovered from modules/sq-*/bin/sq-*; nothing is hard-coded.
+EOF
+}
+
+sq_rc_file() {
+  case "$(basename "${SHELL:-sh}")" in
+    zsh)  echo "$HOME/.zshrc" ;;
+    bash) [ -f "$HOME/.bash_profile" ] && echo "$HOME/.bash_profile" || echo "$HOME/.bashrc" ;;
+    fish) echo "$HOME/.config/fish/config.fish" ;;
+    *)    echo "$HOME/.profile" ;;
+  esac
+}
+
+sq_block() {
+  if [ "$(basename "${SHELL:-sh}")" = "fish" ]; then
+    printf '%s\nset -x PATH "%s" $PATH\n%s\n' "$SQ_MARK_BEGIN" "$ROOT/bin" "$SQ_MARK_END"
+  else
+    printf '%s\nexport PATH="%s:$PATH"\n%s\n' "$SQ_MARK_BEGIN" "$ROOT/bin" "$SQ_MARK_END"
+  fi
+}
+
+sq_install() {
+  local rc; rc="$(sq_rc_file)"
+  local block; block="$(sq_block)"
+  if [ "${1:-}" = "--dry-run" ]; then
+    echo "shell rc: $rc"
+    echo "would append (idempotent):"
+    printf '\n%s\n' "$block"
+    return 0
+  fi
+  mkdir -p "$(dirname "$rc")"
+  [ -f "$rc" ] || touch "$rc"
+  if grep -qxF "$SQ_MARK_BEGIN" "$rc"; then
+    echo "sciqnt already installed in $rc — no changes (idempotent)"
+  else
+    printf '\n%s\n' "$block" >> "$rc"
+    echo "added sciqnt PATH to $rc"
+  fi
+  if [ -n "${BASH_VERSION:-}${ZSH_VERSION:-}" ] && command -v sciqnt >/dev/null 2>&1; then
+    echo "  already on PATH in this shell — try: sciqnt --list"
+  else
+    echo "  activate now:   source $rc"
+    echo "  or open a new shell, then:  sciqnt --list"
+  fi
+}
+
+sq_uninstall() {
+  local rc; rc="$(sq_rc_file)"
+  if [ ! -f "$rc" ] || ! grep -qxF "$SQ_MARK_BEGIN" "$rc"; then
+    echo "no sciqnt block in $rc — nothing to do"
+    return 0
+  fi
+  local tmp; tmp="$(mktemp)"
+  awk -v b="$SQ_MARK_BEGIN" -v e="$SQ_MARK_END" '
+    $0==b { skip=1; next }
+    $0==e { skip=0; next }
+    !skip
+  ' "$rc" > "$tmp" && mv "$tmp" "$rc"
+  echo "removed sciqnt block from $rc"
+}
+
+case "${1:-}" in
+  "")
+    # Landing: interactive home (portfolio + actions) when at a TTY; the
+    # launcher falls back to a plain dump when piped.
+    exec "$PY" "$ROOT/bin/sciqnt-aggregated.py"
+    ;;
+  --asof|--asof=*|--fresh|--once|--history|--history=*|--account|--account=*|--tab|--tab=*|--json)
+    # Landing flags — forward verbatim to the launcher.
+    exec "$PY" "$ROOT/bin/sciqnt-aggregated.py" "$@"
+    ;;
+  insight)
+    # Agent → app push channel: leave / read insights shown on the home.
+    shift
+    PYTHONPATH="$ROOT/core${PYTHONPATH:+:$PYTHONPATH}" \
+      exec "$PY" -c "import sys; from sq_platform import insights; sys.exit(insights.cli(sys.argv[1:]))" "$@"
+    ;;
+  modules|menu)
+    # `modules find <query>` = non-interactive search (script/agent
+    # surface, skills-find style); bare `modules` = interactive browser.
+    if [ "${2:-}" = "find" ]; then
+      shift 2
+      PYTHONPATH="$ROOT/core${PYTHONPATH:+:$PYTHONPATH}" \
+        exec "$PY" -c "import sys; from pathlib import Path; import sq_platform; sys.exit(sq_platform.find_modules(Path('$ROOT'), ' '.join(sys.argv[1:])))" "$@"
+    fi
+    PYTHONPATH="$ROOT/core${PYTHONPATH:+:$PYTHONPATH}" exec "$PY" "$ROOT/bin/sciqnt-interactive.py"
+    ;;
+  reset)
+    # Wipe stored credentials + caches back to a clean install.
+    shift; exec "$PY" "$ROOT/bin/sciqnt-reset.py" "$@"
+    ;;
+  --help|-h)
+    usage; exit 0
+    ;;
+  install)
+    shift; sq_install "$@"; exit 0
+    ;;
+  uninstall)
+    sq_uninstall; exit 0
+    ;;
+  --list)
+    found=0
+    for w in "$ROOT"/modules/sq-*/bin/sq-*; do
+      [ -x "$w" ] || continue
+      n="$(basename "$w" | sed 's/^sq-//')"
+      d="$("$w" --describe 2>/dev/null | head -1)"
+      printf "  %-12s %s\n" "$n" "${d:-(no description)}"
+      found=1
+    done
+    [ "$found" -eq 1 ] || echo "no bundles found under $ROOT/modules"
+    ;;
+  config)
+    # User settings: bare `sciqnt config` opens the interactive settings
+    # screen (plain dump when piped — the wrapper checks interactivity);
+    # `config set [KEY VALUE]` / `config show` forward as usual.
+    shift; exec "$ROOT/modules/sq-config/bin/sq-config" "$@"
+    ;;
+  *)
+    mod="$1"; shift
+    wrapper="$ROOT/modules/sq-$mod/bin/sq-$mod"
+    if [ ! -x "$wrapper" ]; then
+      echo "no module 'sq-$mod' (try: sciqnt --list)" >&2
+      exit 1
+    fi
+    if [ $# -eq 0 ]; then
+      # no action -> show that module's commands
+      echo "sq-$mod · commands:"
+      "$wrapper" --commands 2>/dev/null | while IFS=$'\t' read -r name desc; do
+        printf "  %-10s %s\n" "$name" "$desc"
+      done
+      exit 0
+    fi
+    exec "$wrapper" "$@"
+    ;;
+esac

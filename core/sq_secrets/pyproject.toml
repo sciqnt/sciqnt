@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sciqnt-secrets"
+version = "0.0.1"
+description = "sq-secrets — shared credential substrate (NOT a connector)"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+dependencies = [
+    "keyring",
+    "sciqnt-config",
+    "sciqnt-tui",
+]
+
+[tool.setuptools]
+packages = ["sq_secrets"]
+
+[tool.setuptools.package-dir]
+sq_secrets = "."
+
+[tool.uv.sources]
+    "sciqnt-config" = { workspace = true }
+    "sciqnt-tui" = { workspace = true }

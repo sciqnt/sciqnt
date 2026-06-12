@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sciqnt-tiingo"
+version = "0.0.1"
+description = "sciqnt market-data source unit — official Tiingo EOD daily prices (free key, US-listed symbols)"
+readme = "FINDINGS.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+dependencies = [
+    "sciqnt-schema",
+    "sciqnt-secrets",
+]
+                   # sq-core (sq_schema/sq_secrets) — repo-relative until sq-core ships on PyPI
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.uv.sources]
+"sciqnt-schema" = { workspace = true }
+"sciqnt-secrets" = { workspace = true }

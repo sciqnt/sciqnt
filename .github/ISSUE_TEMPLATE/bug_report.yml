@@ -1,0 +1,19 @@
+name: Bug report
+description: Something computes wrong, renders wrong, or crashes
+labels: [bug]
+body:
+  - type: textarea
+    attributes:
+      label: What happened
+      description: >
+        Paste the command + output. NEVER paste real account data —
+        anonymise labels/figures first.
+    validations: { required: true }
+  - type: input
+    attributes:
+      label: Command that reproduces it
+      placeholder: sciqnt --history YTD
+  - type: textarea
+    attributes:
+      label: Environment
+      placeholder: "OS, Python version, sciqnt version (pip show sciqnt)"

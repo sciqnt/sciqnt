@@ -1,0 +1,20 @@
+name: Connector request
+description: Ask for a broker / exchange / data source — or get help building it yourself
+labels: [connector]
+body:
+  - type: input
+    attributes:
+      label: Broker / exchange / source
+    validations: { required: true }
+  - type: textarea
+    attributes:
+      label: What access does it offer?
+      description: >
+        API? CSV export? Both? Links to docs help. (Flavour preference:
+        API → CSV → CLI → browser-last-resort.)
+  - type: checkboxes
+    attributes:
+      label: Would you build it with your coding agent if guided?
+      description: The generator + conformance harness do most of the work.
+      options:
+        - label: Yes — point me at the tutorial

@@ -1,0 +1,8 @@
+__init__.py
+pyproject.toml
+./__init__.py
+sciqnt_tui.egg-info/PKG-INFO
+sciqnt_tui.egg-info/SOURCES.txt
+sciqnt_tui.egg-info/dependency_links.txt
+sciqnt_tui.egg-info/requires.txt
+sciqnt_tui.egg-info/top_level.txt

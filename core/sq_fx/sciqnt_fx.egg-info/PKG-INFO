@@ -1,0 +1,8 @@
+Metadata-Version: 2.4
+Name: sciqnt-fx
+Version: 0.0.1
+Summary: sq-fx — FX rate access substrate
+License: MIT
+Requires-Python: >=3.10
+Requires-Dist: sciqnt-config
+Requires-Dist: sciqnt-schema

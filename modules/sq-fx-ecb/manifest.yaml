@@ -1,0 +1,20 @@
+# sq-fx-ecb — unit manifest (machine-readable declarations)
+name: sq-fx-ecb
+kind: source                  # source | compute | action
+risk_tier: read               # public reference data; no auth, no execution
+status: proof                 # proof | conformant ; value proven, contract guarded by tests
+schema_version: 0             # uses sq_schema FxRate + FxRateProvider
+broker: European Central Bank (public reference rates)
+flavours:
+  api:                        # only flavour — public XML over HTTPS
+    risk: low                 # no auth, no rate limits worth fearing
+    needs_credentials: false
+    dependencies: []          # stdlib only (urllib.request, xml.etree)
+    code: src/sq_fx_ecb/provider.py
+    status: v1 — daily + 90d history wired; full-history (since 1999) deferred
+capabilities:
+  read:
+    - get_fx_rate             # implements sq_schema.FxRateProvider
+  execute: []                 # none
+known_quirks: FINDINGS.md
+license: MIT

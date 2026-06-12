@@ -1,0 +1,8 @@
+Metadata-Version: 2.4
+Name: sciqnt-analytics
+Version: 0.0.1
+Summary: sq-analytics — pure compute aggregates over canonical entities
+License: MIT
+Requires-Python: >=3.10
+Requires-Dist: sciqnt-compute
+Requires-Dist: sciqnt-schema

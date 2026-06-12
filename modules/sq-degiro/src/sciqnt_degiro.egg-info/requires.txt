@@ -1,0 +1,13 @@
+sciqnt-analytics
+sciqnt-compute
+sciqnt-config
+sciqnt-fx
+sciqnt-schema
+sciqnt-secrets
+sciqnt-tui
+
+[live]
+degiro-connector
+wrapt<2
+protobuf
+keyring

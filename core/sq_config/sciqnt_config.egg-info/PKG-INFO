@@ -1,0 +1,6 @@
+Metadata-Version: 2.4
+Name: sciqnt-config
+Version: 0.0.1
+Summary: sq-config — user-level configuration substrate for sciqnt
+License: MIT
+Requires-Python: >=3.10

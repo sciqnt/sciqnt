@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+# sq-polymarket convenience wrapper.
+set -e
+ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
+PY="$ROOT/.venv/bin/python"
+[ -x "$PY" ] || { echo "no venv at $PY" >&2; exit 1; }
+case "${1:-}" in
+  --describe) echo "Polymarket — event-contract positions (public Data API, wallet address)"; exit 0 ;;
+  --kind) echo "prediction-market,crypto"; exit 0 ;;
+  --commands)
+    printf "setup\tStore wallet address (public; keychain/.env, verified)\n"
+    printf "live\tFetch open event-contract positions\n"
+    exit 0
+    ;;
+  setup) shift; exec "$PY" "$ROOT/modules/sq-polymarket/setup_creds.py" "$@" ;;
+  live)  shift; exec "$PY" "$ROOT/modules/sq-polymarket/src/sq_polymarket/live.py" "$@" ;;
+  *) echo "usage: $(basename "$0") {setup|live} [args]" >&2; exit 1 ;;
+esac

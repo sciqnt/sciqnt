@@ -1,0 +1,29 @@
+# personal / sensitive financial data — NEVER commit
+data/
+
+# secrets
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+
+# python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# os
+.DS_Store
+
+# agent launch artifacts (sq_agents writes these into the launch cwd, incl. repo root for the connector-scaffold flow)
+.sciqnt-agent-task.md
+.sciqnt-agent-launch.command
+
+# connector build staging area (sq_scaffold.build default; promoted to modules/ when green)
+.sq-build/
+# summon artifacts (real portfolio captures — never commit)
+screen.txt
+.sciqnt-agent-task.md
+.sciqnt-agent-launch.command

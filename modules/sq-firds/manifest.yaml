@@ -1,0 +1,25 @@
+# sq-firds — unit manifest
+name: sq-firds
+kind: source
+risk_tier: read
+status: proof
+flavours:
+  api:
+    risk: official           # ESMA's public registers Solr endpoint
+    dependencies: []         # stdlib only
+schema_version: 0
+capabilities:
+  read:
+    - resolve_metadata       # ISIN → name / CFI / asset class / ccy / MIC / LEI
+  execute: []
+inputs:
+  - isin
+dependencies: []             # stdlib only
+caveats: >
+  EU regulatory reference data (MiFID II): instruments traded on EU/EEA
+  venues since 2018. Pre-2018 delistings absent; US-only listings absent
+  unless also EU-traded. No tickers (pair with sq-openfigi). Endpoint is
+  an undocumented-but-public Solr core — be a polite client (cache hard,
+  no server-side range filters).
+known_quirks: FINDINGS.md
+license: MIT

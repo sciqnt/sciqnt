@@ -1,0 +1,3 @@
+Date,Time,Product,ISIN,Reference exchange,Venue,Quantity,Price,,Local value,,Value EUR,Exchange rate,AutoFX Fee,Transaction and/or third party fees EUR,Total EUR,Order ID,
+06-02-2023,16:39,LondonCo,TEST0000003,LSE,MESI,-33,"295,9000",GBX,"9764,70",GBX,"109,46","89,2100","-0,27","-4,90","104,28",,uuid-gbx-sell
+14-01-2025,09:00,DollarFund,TEST0000004,LSE,XLON,100,"114,1000",USD,"-11410,00",USD,"-11128,52","1,0253","-27,82","-3,00","-11159,34",,uuid-usd-buy

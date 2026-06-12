@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sciqnt-robinhood"
+version = "0.0.1"
+description = "sciqnt Robinhood source unit — live positions + cash via robin_stocks (unofficial)"
+readme = "FINDINGS.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+dependencies = [
+    "sciqnt-analytics",
+    "sciqnt-config",
+    "sciqnt-fx",
+    "sciqnt-schema",
+    "sciqnt-secrets",
+    "sciqnt-tui",
+]
+
+[project.optional-dependencies]
+# LIVE (api) flavour — unofficial, reverse-engineered, at-your-own-risk.
+# pyotp drives TOTP MFA; keyring backs the shared credential substrate.
+live = ["robin_stocks", "pyotp", "keyring"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.uv.sources]
+"sciqnt-analytics" = { workspace = true }
+"sciqnt-config" = { workspace = true }
+"sciqnt-fx" = { workspace = true }
+"sciqnt-schema" = { workspace = true }
+"sciqnt-secrets" = { workspace = true }
+"sciqnt-tui" = { workspace = true }

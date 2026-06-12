@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sciqnt-market-data"
+version = "0.0.1"
+description = "sq-market-data — mark-to-market overlay over canonical Positions"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+dependencies = [
+    "sciqnt-schema",
+]
+
+[tool.setuptools]
+packages = ["sq_market_data"]
+
+[tool.setuptools.package-dir]
+sq_market_data = "."
+
+[tool.uv.sources]
+    "sciqnt-schema" = { workspace = true }
