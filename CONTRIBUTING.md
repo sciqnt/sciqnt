@@ -5,6 +5,30 @@ The fastest way to understand this repo: `AGENT_GUIDE.md` (codebase map),
 go in its direction). Coding agents are first-class contributors here;
 point yours at `AGENTS.md`.
 
+## How a PR is reviewed
+
+Two gates, deliberately separate:
+
+1. **CI — the mechanical gate.** `./run_tests.sh` runs in CI on every PR (every
+   package's tests, the conformance suite, the personal-data scrub). It answers
+   *"is it correct and clean?"* Green is required.
+2. **The principle-review agent — the judgment gate.** An agent reads your diff
+   against the constitution (`PRINCIPLES.md`) using the rubric in
+   `.github/PRINCIPLE_REVIEW.md`, and posts a review. It answers *"does this
+   belong in sciqnt?"* — a PR can be green and still bend a top principle (money
+   never computed by an LLM, append-only/bitemporal facts, no credential
+   custody, the thin contract). It's a maintainer aid, not an auto-merge; a
+   human still presses the button.
+
+A maintainer can summon the agent to make changes by commenting **`@claude
+<instruction>`** on the PR — e.g. *"@claude bring this in line with
+PRINCIPLES.md and push the fix"*. It reads the constitution, edits, keeps the
+suite green, and pushes to the branch (forks need *Allow edits from maintainers*).
+
+The fastest way through both gates: run the rubric on yourself first
+(`.github/PRINCIPLE_REVIEW.md`) and fill in the PR template's principle
+self-check — the "honest gaps" habit (P18).
+
 ## Ground rules
 
 - **DCO, not CLA.** Sign your commits off (`git commit -s`,

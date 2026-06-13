@@ -1,0 +1,59 @@
+# On-demand agent — the FIX arm of the maintenance defense.
+#
+# A maintainer comments `@claude <instruction>` on a PR or issue (e.g.
+# "@claude bring this in line with PRINCIPLES.md and push the fix", or
+# "@claude this connector skips bitemporal columns — add them with a test").
+# The agent reads the constitution + the code, makes the change, runs the
+# suite, and pushes a commit to the PR branch (or opens one for an issue).
+#
+# SECURITY: the action only acts for users with write/admin permission, so an
+# arbitrary fork contributor cannot trigger a push. This is the deliberate home
+# for write access — gated behind a trusted human's explicit request — kept
+# separate from the automated, read-only `principle-review` workflow.
+# Note: pushing a fix onto a FORK's PR branch requires the contributor to have
+# enabled "Allow edits from maintainers"; otherwise the agent proposes the
+# patch in a comment instead.
+name: claude
+
+on:
+  issue_comment:
+    types: [created]
+  pull_request_review_comment:
+    types: [created]
+  issues:
+    types: [opened, assigned]
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+  id-token: write
+  actions: read
+
+jobs:
+  claude:
+    if: >-
+      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude')) ||
+      (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude')) ||
+      (github.event_name == 'issues' && (contains(github.event.issue.body, '@claude') || contains(github.event.issue.title, '@claude')))
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          trigger_phrase: "@claude"
+          prompt: |
+            You are working in sciqnt (github.com/sciqnt/sciqnt). Before any
+            change, read PRINCIPLES.md, .github/PRINCIPLE_REVIEW.md, and
+            AGENT_GUIDE.md — the constitution governs every edit. Any code you
+            touch must keep `./run_tests.sh` green (tests + conformance + the
+            personal-data scrub); run it before you push. Money stays `Decimal`,
+            facts stay bitemporal, no credential custody, synthetic fixtures
+            only. State honest gaps (P18) in your summary.
+          claude_args: |
+            --model claude-opus-4-8
+            --max-turns 40
