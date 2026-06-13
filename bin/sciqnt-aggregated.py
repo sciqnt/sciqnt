@@ -10,12 +10,12 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "core"))
-# Each broker bundle's src/ on the path so `import sq_<broker>` resolves
-# for the registry inside sq_platform.aggregated.
-for bundle in (ROOT / "modules").glob("sq-*"):
-    src = bundle / "src"
-    if src.is_dir():
-        sys.path.insert(0, str(src))
+# Each bundle's src/ on the path so `import sq_<broker>` resolves for the
+# registry inside sq_platform.aggregated — across ALL install sources (the
+# repo's modules/ AND the user's community dir, via bundle_src_paths).
+import sq_platform                                          # noqa: E402
+for src in sq_platform.bundle_src_paths(ROOT):
+    sys.path.insert(0, src)
 
 from sq_platform.aggregated import run_aggregated   # noqa: E402
 from sq_platform.home import run_home                # noqa: E402

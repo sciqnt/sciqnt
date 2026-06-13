@@ -24,10 +24,16 @@ don't; MCP + AGENTS.md donated to the Agentic AI Foundation 2026-02).
   - library user: `pip install sciqnt-schema sciqnt-compute` (the contract
     stands alone — the OpenBB-outcome path)
   - connector-only: `pip install sciqnt-degiro` (proven standalone)
-- **Community tier distributes via git, not PyPI:** `sciqnt modules add
-  owner/repo` installs by ref + runs conformance locally before first use.
-  PyPI is for official; the long tail must not wait on us (and we must not
-  custody it).
+- **Community tier distributes via git, not PyPI — BUILT 2026-06-12:**
+  `sciqnt modules add owner/repo` fetches a connector, runs its conformance
+  suite locally, and installs it (only if green) into the user's sovereign
+  dir `~/.local/share/sciqnt/modules/`; `remove`/`list` to manage. NO PyPI,
+  NO per-module form, NO central registry — this is the SCALABILITY answer
+  for thousands of community connectors (the per-package PyPI form is a
+  one-time setup for OUR ~29 official packages only, never a contributor
+  cost). Discovery is source-agnostic (`bundle_dirs`: repo + user dir;
+  installed-entry-points next for the `uv tool install` path). The long
+  tail never waits on us, and we never custody it.
 - **MCP server** (when built): published to the **MCP Registry** — ~2k
   entries, early listing = real visibility; add the `.well-known` server
   card when the spec lands.

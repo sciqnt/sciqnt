@@ -112,13 +112,21 @@ case "${1:-}" in
       exec "$PY" -c "import sys; from sq_platform import insights; sys.exit(insights.cli(sys.argv[1:]))" "$@"
     ;;
   modules|menu)
-    # `modules find <query>` = non-interactive search (script/agent
-    # surface, skills-find style); bare `modules` = interactive browser.
-    if [ "${2:-}" = "find" ]; then
-      shift 2
-      PYTHONPATH="$ROOT/core${PYTHONPATH:+:$PYTHONPATH}" \
-        exec "$PY" -c "import sys; from pathlib import Path; import sq_platform; sys.exit(sq_platform.find_modules(Path('$ROOT'), ' '.join(sys.argv[1:])))" "$@"
-    fi
+    # `modules find <query>` = non-interactive search (script/agent surface);
+    # `modules add owner/repo | remove <name> | list` = community connector
+    # install (git-ref, conformance-gated, no PyPI); bare = interactive browser.
+    case "${2:-}" in
+      find)
+        shift 2
+        PYTHONPATH="$ROOT/core${PYTHONPATH:+:$PYTHONPATH}" \
+          exec "$PY" -c "import sys; from pathlib import Path; import sq_platform; sys.exit(sq_platform.find_modules(Path('$ROOT'), ' '.join(sys.argv[1:])))" "$@"
+        ;;
+      add|remove|list)
+        shift
+        PYTHONPATH="$ROOT/core${PYTHONPATH:+:$PYTHONPATH}" \
+          exec "$PY" -c "import sys; from pathlib import Path; from sq_platform import modules_cmd; sys.exit(modules_cmd.cli(Path('$ROOT'), sys.argv[1:]))" "$@"
+        ;;
+    esac
     PYTHONPATH="$ROOT/core${PYTHONPATH:+:$PYTHONPATH}" exec "$PY" "$ROOT/bin/sciqnt-interactive.py"
     ;;
   reset)
@@ -135,15 +143,11 @@ case "${1:-}" in
     sq_uninstall; exit 0
     ;;
   --list)
-    found=0
-    for w in "$ROOT"/modules/sq-*/bin/sq-*; do
-      [ -x "$w" ] || continue
-      n="$(basename "$w" | sed 's/^sq-//')"
-      d="$("$w" --describe 2>/dev/null | head -1)"
-      printf "  %-12s %s\n" "$n" "${d:-(no description)}"
-      found=1
-    done
-    [ "$found" -eq 1 ] || echo "no bundles found under $ROOT/modules"
+    # Discovery across ALL sources (repo + community dir) lives in Python —
+    # use it so community connectors (sciqnt modules add) show here too.
+    PYTHONPATH="$ROOT/core${PYTHONPATH:+:$PYTHONPATH}" \
+      exec "$PY" -c "import sys; from pathlib import Path; import sq_platform; b=sq_platform.discover_bundles(Path('$ROOT'));
+[print('  %-12s %s' % (n, d or '(no description)')) for n,_,d in b] or print('no bundles found')"
     ;;
   config)
     # User settings: bare `sciqnt config` opens the interactive settings

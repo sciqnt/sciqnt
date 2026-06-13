@@ -28,6 +28,46 @@ from pathlib import Path
 import sq_tui
 from sq_tui import BOLD, BRAND, DIM, RST
 
+
+def user_modules_dir() -> Path:
+    """Where community connectors install — `sciqnt modules add owner/repo`
+    drops conformance-passing bundles here. Outside the repo (a pip-installed
+    sciqnt has no `modules/`), user-owned, sovereign. `SQ_MODULES_PATH`
+    overrides; default follows the same data-dir convention as the price
+    archive + insights store."""
+    env = os.environ.get("SQ_MODULES_PATH")
+    if env:
+        return Path(env).expanduser()
+    return Path.home() / ".local" / "share" / "sciqnt" / "modules"
+
+
+def bundle_dirs(root) -> list[Path]:
+    """Every directory holding a sciqnt bundle, across ALL install sources —
+    the single discovery seam (composable doctrine: discovery over
+    enumeration; modular + host-agnostic). Sources:
+      1. the repo's `modules/sq-*` (dev / git-clone mode)
+      2. the user dir `~/.local/share/sciqnt/modules/sq-*` (community
+         connectors added via `sciqnt modules add` — no PyPI, no form, no
+         central registry; conformance-gated locally)
+    A name in BOTH resolves to the repo copy (the maintained bundle beats a
+    stale community fetch). Returns deduped bundle dirs, sorted by name."""
+    seen: dict[str, Path] = {}
+    # User dir first, repo dir second → repo overwrites on name collision.
+    for base in (user_modules_dir(), Path(root) / "modules"):
+        if not base.is_dir():
+            continue
+        for d in base.glob("sq-*"):
+            if d.is_dir():
+                seen[d.name] = d
+    return [seen[k] for k in sorted(seen)]
+
+
+def bundle_src_paths(root) -> list[str]:
+    """Each discovered bundle's importable `src/` dir — the launcher adds
+    these to sys.path so `import sq_<name>` resolves for community bundles
+    too, not only the repo's."""
+    return [str(d / "src") for d in bundle_dirs(root) if (d / "src").is_dir()]
+
 # Intro mark — a small braille rendering of the sciqnt tree/sprout (the SVG
 # icon). Braille packs 2x4 dots per cell, the highest-resolution monochrome a
 # non-image terminal can draw; printed in the brand colour (sq_tui.BRAND).
@@ -69,15 +109,16 @@ def print_banner(root):
 
 
 def discover_bundles(root):
-    """Return [(name, wrapper_path, description)] for executable wrappers."""
-    root = Path(root)
+    """Return [(name, wrapper_path, description)] for executable wrappers,
+    across every install source (repo + user community dir)."""
     out = []
-    for wrapper in sorted(glob.glob(str(root / "modules" / "sq-*" / "bin" / "sq-*"))):
-        if not os.access(wrapper, os.X_OK):
-            continue
-        name = Path(wrapper).name.replace("sq-", "", 1)
-        desc = (_run([wrapper, "--describe"]) or "").strip()
-        out.append((name, wrapper, desc))
+    for d in bundle_dirs(root):
+        for wrapper in sorted(glob.glob(str(d / "bin" / "sq-*"))):
+            if not os.access(wrapper, os.X_OK):
+                continue
+            name = Path(wrapper).name.replace("sq-", "", 1)
+            desc = (_run([wrapper, "--describe"]) or "").strip()
+            out.append((name, wrapper, desc))
     return out
 
 

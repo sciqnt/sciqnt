@@ -140,9 +140,8 @@ def _discover_brokers(root) -> list[tuple[str, Callable]]:
     do `fn(asof)` keep working unchanged.
     """
     out: list[tuple[str, Callable]] = []
-    for bundle in sorted((root / "modules").glob("sq-*")):
-        if not bundle.is_dir():
-            continue
+    from . import bundle_dirs
+    for bundle in bundle_dirs(root):
         name = bundle.name.replace("sq-", "", 1)
         mod_name = "sq_" + name.replace("-", "_")
         try:
@@ -189,9 +188,8 @@ def _available_connectors(root) -> list[str]:
     "available to connect" and to drive the connect menu — modularity:
     a connector existing is independent of an account being attached."""
     out: list[str] = []
-    for bundle in sorted((root / "modules").glob("sq-*")):
-        if not bundle.is_dir():
-            continue
+    from . import bundle_dirs
+    for bundle in bundle_dirs(root):
         name = bundle.name.replace("sq-", "", 1)
         mod_name = "sq_" + name.replace("-", "_")
         try:

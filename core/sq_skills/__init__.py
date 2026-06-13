@@ -127,6 +127,17 @@ Reproduce with `sciqnt <name> live` (or `--fresh`). Read the bundle's
 a changed broker payload shape, or a conformance violation. Fix in
 `canonical.py`, re-run `./run_tests.sh` to green, and log the quirk in `FINDINGS.md`.
 
+## Distributing a connector you built
+Two paths, no central bottleneck:
+- **Community (the scalable default):** push the bundle to a GitHub repo;
+  anyone installs it with `sciqnt modules add owner/repo` — which fetches it,
+  runs its conformance suite locally, and only activates it if green. No PyPI,
+  no form, no registry. `sciqnt modules remove <name>` / `list` to manage.
+- **Official / PyPI (optional):** a bundle is also a real `sciqnt-<name>`
+  distribution (`pyproject.toml`) — publishable to PyPI in your own namespace
+  if you want `pip install`. Not required; the git-ref path needs nothing.
+Either way the bundle is self-contained and conformance is the trust gate.
+
 ## Working at scale
 You can spawn subagents to work several connectors in parallel (e.g. build one
 while diagnosing another) — each connector is independent.
