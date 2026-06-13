@@ -15,10 +15,12 @@ case "${1:-}" in
     printf "setup\tStore credentials (keychain or .env fallback, verified)\n"
     printf "live\tFetch current positions + cash (one account; picker when several)\t[--account NAME]\n"
     printf "sync\tRefresh history CSVs from Degiro — every configured account, or one\t[--account NAME]\n"
+    printf "forget\tRemove a connected account (credentials + session)\t[--account NAME]\n"
     printf "doctor\tHealth check per account: creds · session · history CSVs\t[probe|fix-totp]\n"
     exit 0
     ;;
   setup)    shift; exec "$PY" "$ROOT/modules/sq-degiro/setup_creds.py" "$@" ;;
+  forget)   shift; exec "$PY" "$ROOT/modules/sq-degiro/forget_creds.py" "$@" ;;
   live)     shift; exec "$PY" "$ROOT/modules/sq-degiro/src/sq_degiro/live.py" "$@" ;;
   sync)     shift; exec "$PY" "$ROOT/modules/sq-degiro/src/sq_degiro/history_sync.py" "$@" ;;
   doctor)
@@ -46,5 +48,5 @@ USAGE
   # / scripts don't break, but they're not advertised in --commands anymore.
   probe)    shift; exec "$PY" "$ROOT/modules/sq-degiro/probe.py" "$@" ;;
   fix-totp) shift; exec "$PY" "$ROOT/modules/sq-degiro/fix_totp.py" "$@" ;;
-  *) echo "usage: $(basename "$0") {setup|live [--account NAME]|sync [--account NAME]|doctor [probe|fix-totp|show-creds]} [args]" >&2; exit 1 ;;
+  *) echo "usage: $(basename "$0") {setup|live [--account NAME]|sync [--account NAME]|forget [--account NAME]|doctor [probe|fix-totp|show-creds]} [args]" >&2; exit 1 ;;
 esac

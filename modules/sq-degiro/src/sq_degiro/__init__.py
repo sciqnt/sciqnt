@@ -35,6 +35,11 @@ from .pnl import analyze
 
 SERVICE = "sq-degiro"
 SECRET_KEYS = ["username", "password", "totp_secret"]
+# key → .env fallback variable name. The canonical (key, env) manifest used by
+# the `forget` flow to scrub BOTH backends (keychain + .env); kept here as the
+# bundle's single source of truth (setup_creds.FIELDS / doctor mirror it).
+SECRET_ENV = {"username": "DEGIRO_USERNAME", "password": "DEGIRO_PASSWORD",
+              "totp_secret": "DEGIRO_TOTP_SECRET"}
 _ENV_FILE = Path(__file__).resolve().parents[2] / ".env"   # bundle-local .env fallback
 
 # ── Shared authenticated session (ONE login, not one per request) ───────
@@ -98,7 +103,8 @@ def persist_session_state(api, account: Optional[str] = None):
         account=account)
 
 
-def login(api, *, notify=None, timeout: float = 120.0, poll: float = 3.0):
+def login(api, *, notify=None, timeout: float = 120.0, poll: float = 3.0,
+          wait_for_approval: bool = True):
     """`api.connect()` that COMPLETES Degiro's in-app approval flow.
 
     degiro-connector raises on `inAppTOTPNeeded` (status 12) instead of
@@ -112,6 +118,14 @@ def login(api, *, notify=None, timeout: float = 120.0, poll: float = 3.0):
     persist_session_state) but live evidence says Degiro still re-fires the
     popup on fresh logins — so the UI never promises 30 days; the session
     reuse (one login per sitting) is what actually reduces popups.
+
+    `wait_for_approval`: True only for the EXPLICIT connect/reconnect flow,
+    where a human just typed their password and is ready to tap the phone —
+    we poll for the tap. False for every AUTOMATIC path (home load, ^R,
+    aggregate, `live`/`sync` borrow): a direct/TOTP/device-cookie login still
+    self-heals silently, but if Degiro demands an in-app tap we raise
+    NeedsAction("approve") IMMEDIATELY instead of blocking the whole refresh
+    for two minutes waiting on a phone (the hang this guards against).
 
     Returns the flow that authenticated: "direct" (password / TOTP / device
     cookie — no human in the loop) or "in-app" (the user had to tap Yes).
@@ -143,6 +157,16 @@ def login(api, *, notify=None, timeout: float = 120.0, poll: float = 3.0):
 
     creds = api.credentials
     creds.in_app_token = token
+    if not wait_for_approval:
+        # Automatic refresh: don't sit on a 2-minute phone-approval poll —
+        # surface it fast so one stuck account can't hang the whole view.
+        # State the SYMPTOM ("needs re-authentication") rather than prescribing
+        # a fix — Degiro asked for an in-app tap, but that isn't always what
+        # actually unblocks the account, and we don't want to pigeonhole the
+        # user (or the agent) into one guessed remedy. The home recommends the
+        # agent for exactly this; it gets the full error and can investigate.
+        creds.in_app_token = None
+        raise sq_secrets.NeedsAction("needs re-authentication", action="approve")
     if notify:
         notify("Open the DEGIRO app and tap 'Yes' to approve this login…")
     deadline = _time.monotonic() + timeout
@@ -214,7 +238,13 @@ def connected_api(account: Optional[str] = None):
     try:
         int_account = api.get_client_details()["data"]["intAccount"]
     except Exception:                                       # noqa: BLE001
-        login(api, notify=_notify)                           # ONE fresh login
+        # ONE fresh login. This is the AUTOMATIC borrow path (snapshot / live /
+        # sync / aggregate), never the interactive connect form — so it
+        # self-heals a direct/TOTP/device-cookie session silently but does NOT
+        # block on the in-app phone tap (wait_for_approval=False → fast
+        # NeedsAction). The explicit `setup` flow runs its own login that does
+        # wait. Without this, one account pending approval hangs every refresh.
+        login(api, notify=_notify, wait_for_approval=False)
         int_account = api.get_client_details()["data"]["intAccount"]
         persist_session_state(api, account)
     api.credentials.int_account = int_account

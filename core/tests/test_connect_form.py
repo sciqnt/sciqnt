@@ -156,27 +156,27 @@ class TestAccountProblemLines(unittest.TestCase):
     def test_credentials_missing(self):
         ln = self._line("robinhood:dave", "CredentialsMissing: No Robinhood…")
         self.assertIn("isn't connected", ln)
-        self.assertIn("Connect to Broker Account › robinhood", ln)
+        self.assertIn("Connect new Account", ln)
         self.assertNotIn("CredentialsMissing", ln)       # no jargon
 
-    def test_needs_action_message_passes_through(self):
-        ln = self._line("degiro:Alice",
-                        "NeedsAction: approve the login in the DEGIRO app, "
-                        "then refresh")
-        self.assertIn("needs you", ln)
-        self.assertIn("approve the login in the DEGIRO app", ln)
-        self.assertNotIn("NeedsAction", ln)
+    def test_needs_action_just_says_couldnt_fetch(self):
+        """A 'needs action' failure stops at the honest symptom — no guessed
+        reason or remedy (the agent, recommended above, diagnoses), and never
+        the raw exception class."""
+        ln = self._line("degiro:Alice", "NeedsAction: needs re-authentication")
+        self.assertIn("couldn't fetch", ln)
+        self.assertNotIn("re-authentication", ln)         # no guessed reason
+        self.assertNotIn("NeedsAction", ln)               # no jargon
 
     def test_conformance_is_integrity_warning(self):
         ln = self._line("degiro:Main", "conformance: bad money decimal")
         self.assertIn("integrity", ln)
         self.assertNotIn("bad money decimal", ln)        # detail → ? help
 
-    def test_unknown_error_is_dim_retry_line(self):
+    def test_unknown_error_just_says_couldnt_fetch(self):
         ln = self._line("kalshi:k1", "ReadTimeout: HTTPSConnectionPool…")
         self.assertIn("couldn't fetch", ln)
-        self.assertIn("^R", ln)
-        self.assertNotIn("HTTPSConnectionPool", ln)
+        self.assertNotIn("HTTPSConnectionPool", ln)       # no raw detail
 
 
 if __name__ == "__main__":
@@ -186,8 +186,8 @@ if __name__ == "__main__":
 class TestWarningModeComponent(unittest.TestCase):
     """When accounts fail, the SciQnt Agent component keeps the SAME layout
     as the healthy state (selector row + toggle first) — only the greyed
-    Ask-hint slot is replaced by an orange '⚠ Troubleshoot with Agent:'
-    block listing the issues."""
+    Ask-hint slot is replaced by an orange '⚠ Recommended: Troubleshoot with
+    Agent' header + the issue lines beneath."""
 
     def _rows(self, warnings=None):
         from sq_platform import home
@@ -204,7 +204,7 @@ class TestWarningModeComponent(unittest.TestCase):
         self.assertIsNotNone(toggle)                  # toggle KEPT (same style)
         self.assertEqual(rows[0][1], "agent")         # selector row still first
         self.assertIn("SciQnt Agent + Claude", rows[0][0])
-        self.assertIn("Troubleshoot with Agent:", rows[1][0])   # header next
+        self.assertIn("⚠ Recommended: Troubleshoot with Agent", rows[1][0])  # header
         self.assertEqual(rows[1][1], sq_tui.SEP)
         self.assertIn("needs you", rows[2][0])        # issue lines indented
         self.assertTrue(rows[2][0].startswith("      "))
@@ -222,10 +222,18 @@ class TestWarningModeComponent(unittest.TestCase):
     def test_multiple_issues_listed(self):
         rows, *_ = self._rows(["a failed", "b failed"])
         texts = [r[0] for r in rows]
-        self.assertEqual(sum("Troubleshoot with Agent:" in t
+        self.assertEqual(sum("⚠ Recommended: Troubleshoot with Agent" in t
                              for t in texts), 1)      # ONE header
         self.assertTrue(any("a failed" in t for t in texts))
         self.assertTrue(any("b failed" in t for t in texts))
+
+    def test_long_outage_list_is_capped(self):
+        """A long failing-account list is truncated so it can't push the
+        portfolio table off the fixed-height frame."""
+        rows, *_ = self._rows([f"acct{i} failed" for i in range(7)])
+        texts = [r[0] for r in rows]
+        self.assertTrue(any("…and 4 more" in t for t in texts))   # 7 − 3 shown
+        self.assertFalse(any("acct5 failed" in t for t in texts)) # beyond the cap
 
     def test_healthy_mode_unchanged(self):
         rows, styles, toggle, installed = self._rows(None)
@@ -240,7 +248,7 @@ class TestAccountProblemText(unittest.TestCase):
         from sq_platform.aggregated import account_problem_text
 
         class B:
-            broker, error = "degiro:G", "NeedsAction: approve the login"
+            broker, error = "degiro:G", "NeedsAction: needs re-authentication"
         text = account_problem_text(B())
         self.assertNotIn("\x1b", text)
-        self.assertIn("needs you — approve the login", text)
+        self.assertEqual(text, "degiro:G couldn't fetch")

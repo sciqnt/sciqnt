@@ -147,6 +147,35 @@ def _write_env_var(env_path, var, value):
         pass
 
 
+def _delete_env_var(env_path, var) -> bool:
+    """Remove the `VAR=…` line from a local .env file (preserving the rest).
+    Returns True if a line was removed. The symmetric inverse of
+    `_write_env_var` — used by a bundle's `forget` flow to scrub the .env
+    fallback when an account is deleted. Silent (False) if the file or the
+    var is absent."""
+    import pathlib
+    p = pathlib.Path(env_path)
+    if not p.exists():
+        return False
+    kept, removed = [], False
+    for line in p.read_text().splitlines():
+        s = line.strip()
+        if s and not s.startswith("#") and "=" in s:
+            k, _, _ = s.partition("=")
+            if k.strip() == var:
+                removed = True
+                continue
+        kept.append(line)
+    if not removed:
+        return False
+    p.write_text(("\n".join(kept) + "\n") if kept else "")
+    try:
+        p.chmod(0o600)
+    except Exception:
+        pass
+    return True
+
+
 def _qualified_key(key, account):
     """Compose the keychain key for a (key, account) pair.
     `account=None` → bare key (the legacy single-account form; preserved
@@ -310,6 +339,40 @@ def clear_accounts(service) -> None:
         _accounts_path(service).unlink()
     except OSError:
         pass
+
+
+def forget_account(service, account, keys, *, env_path=None) -> dict:
+    """Remove a connected account end-to-end — the symmetric inverse of the
+    store side (`store_secret` + `register_account`). The reusable mechanism
+    behind every bundle's `forget` command:
+
+      1. delete each account-qualified keychain secret in `keys`
+      2. scrub the matching `.env` fallback lines (when `env_path` given)
+      3. drop the persisted broker session
+      4. unregister the account name from the registry
+
+    `keys` is a list of `(keychain_key, env_var)` pairs — a bundle's
+    credential manifest (`CREDENTIAL_KEYS`); `env_var` may be None for a
+    keychain-only secret. `account=None` is the legacy single-account form
+    (bare keys); a named account uses the `<account>:<key>` /
+    `<ENV_VAR>_<ACCOUNT>` qualifiers throughout. Never raises (a partial
+    backend — no keyring, no .env — just leaves that step a no-op); returns
+    a small report of what was actually removed so the caller can be honest
+    about it."""
+    removed_keychain, removed_env = [], []
+    for entry in keys:
+        key, env_var = (entry if isinstance(entry, (tuple, list))
+                        else (entry, None))
+        if delete_secret(service, key, account=account):
+            removed_keychain.append(key)
+        if env_path and env_var:
+            if _delete_env_var(env_path, _qualified_env_var(env_var, account)):
+                removed_env.append(env_var)
+    clear_session(service, account)
+    if account is not None:
+        unregister_account(service, account)
+    return {"service": service, "account": account,
+            "keychain": removed_keychain, "env": removed_env}
 
 
 def prompt_and_store(service, fields, env_path=None, mode=None, verify=None,

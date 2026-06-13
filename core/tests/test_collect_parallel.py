@@ -80,6 +80,29 @@ class TestCollectParallel(unittest.TestCase):
         self.assertEqual(names, {"a", "b"})
         self.assertTrue(any(s == "ok" for _, s in seen))
 
+    def test_needs_action_fails_fast_without_retry(self):
+        """NeedsAction (e.g. 'approve the login in the app') is NOT retried —
+        a retry can't fix a user-action requirement and re-attempting a login
+        would re-fire the in-app push. A transient error still retries."""
+        import sq_secrets
+        calls = {"need": 0, "flaky": 0}
+
+        def needs(*a, **k):
+            calls["need"] += 1
+            raise sq_secrets.NeedsAction("approve in the app", action="approve")
+
+        def flaky(*a, **k):
+            calls["flaky"] += 1
+            raise RuntimeError("transient")
+
+        brokers = [("need", needs), ("flaky", flaky)]
+        with mock.patch.object(ag, "_FETCH_RETRY_DELAY_S", 0):
+            out = {b.broker: b for b in self._run(brokers)}
+        self.assertFalse(out["need"].ok)
+        self.assertEqual(calls["need"], 1)                          # no retry
+        self.assertIn("NeedsAction", out["need"].error)
+        self.assertEqual(calls["flaky"], ag._LIVE_FETCH_ATTEMPTS)   # retried
+
 
 if __name__ == "__main__":
     unittest.main()

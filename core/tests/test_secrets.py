@@ -334,6 +334,58 @@ class TestAccountRegistry(unittest.TestCase):
         sq_secrets.clear_accounts("sq-never")        # must not raise
 
 
+class TestForgetAccount(unittest.TestCase):
+    """forget_account is the reusable removal mechanism behind a bundle's
+    `forget` command — the symmetric inverse of store + register."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self._orig_xdg = os.environ.get("XDG_CONFIG_HOME")
+        os.environ["XDG_CONFIG_HOME"] = self.tmp.name
+
+    def tearDown(self):
+        if self._orig_xdg is None:
+            os.environ.pop("XDG_CONFIG_HOME", None)
+        else:
+            os.environ["XDG_CONFIG_HOME"] = self._orig_xdg
+        self.tmp.cleanup()
+
+    def test_scrubs_env_and_registry_keeping_unrelated(self):
+        env = Path(self.tmp.name) / ".env"
+        # Qualified env vars for the 'work' account + one unrelated line.
+        sq_secrets._write_env_var(env, "DEGIRO_USERNAME_WORK", "alice")
+        sq_secrets._write_env_var(env, "DEGIRO_PASSWORD_WORK", "secret")
+        sq_secrets._write_env_var(env, "KEEP_ME", "yes")
+        sq_secrets.register_account("sq-degiro", "work")
+
+        keys = [("username", "DEGIRO_USERNAME"),
+                ("password", "DEGIRO_PASSWORD")]
+        report = sq_secrets.forget_account(
+            "sq-degiro", "work", keys, env_path=env)
+
+        self.assertNotIn("work", sq_secrets.list_accounts("sq-degiro"))
+        text = env.read_text()
+        self.assertNotIn("DEGIRO_USERNAME_WORK", text)
+        self.assertNotIn("DEGIRO_PASSWORD_WORK", text)
+        self.assertIn("KEEP_ME", text)                       # unrelated preserved
+        self.assertEqual(set(report["env"]),
+                         {"DEGIRO_USERNAME", "DEGIRO_PASSWORD"})
+
+    def test_bare_string_keys_and_missing_is_idempotent(self):
+        # Bare-string keys (keychain-only, no env) + nothing stored → no raise.
+        report = sq_secrets.forget_account("sq-degiro", "ghost",
+                                           ["username", "password"])
+        self.assertEqual(report["account"], "ghost")
+        self.assertEqual(report["env"], [])
+
+    def test_delete_env_var_returns_false_when_absent(self):
+        env = Path(self.tmp.name) / ".env"
+        self.assertFalse(sq_secrets._delete_env_var(env, "NOPE"))
+        sq_secrets._write_env_var(env, "A", "1")
+        self.assertFalse(sq_secrets._delete_env_var(env, "B"))
+        self.assertTrue(sq_secrets._delete_env_var(env, "A"))
+
+
 class TestDefaultAccountFromUsername(unittest.TestCase):
     """A blank account label names the account after an identity field
     (e.g. username) instead of an anonymous bare-key account."""

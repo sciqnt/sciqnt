@@ -239,6 +239,18 @@ class TestInAppApproval(unittest.TestCase):
         self.assertIn("DEGIRO app", str(ctx.exception))
         self.assertIsNone(api.credentials.in_app_token)
 
+    def test_no_wait_fails_fast_without_polling(self):
+        """The AUTOMATIC path (wait_for_approval=False) must NOT sit on the
+        in-app poll — one stuck account would hang every refresh. It raises
+        NeedsAction immediately after the first /login (status 12), with no
+        further /in-app polls."""
+        api = _InAppAPI(approve_after=10**9)
+        with self.assertRaises(sq_secrets.NeedsAction) as ctx:
+            sq_degiro.login(api, notify=None, wait_for_approval=False)
+        self.assertEqual(ctx.exception.action, "approve")
+        self.assertEqual(api.attempts, 1)                 # ONE attempt, no poll
+        self.assertIsNone(api.credentials.in_app_token)   # never leaks onward
+
     def test_genuinely_bad_credentials_raise_immediately(self):
         """status 3 on the INITIAL /login (before any status 12) really is
         bad credentials — no in-app phase, no polling, immediate raise."""

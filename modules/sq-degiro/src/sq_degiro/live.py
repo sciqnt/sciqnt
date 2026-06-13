@@ -427,7 +427,7 @@ def _build_history_tab(*, base_ccy: str, account=None) -> str | None:
         all_txns, group_by="year", currency=base_ccy)
     divs = sq_analytics.dividend_history(all_txns, group_by="year")
     fees = sq_analytics.fee_history(all_txns, group_by="year")
-    from . import _resolve_cost_basis_method
+    from sq_degiro import _resolve_cost_basis_method
     rpl  = sq_analytics.realized_pl_over_time(
         all_txns, base_currency=base_ccy, group_by="year",
         method=_resolve_cost_basis_method())

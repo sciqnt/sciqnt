@@ -20,13 +20,17 @@ import sys
 import threading
 from pathlib import Path
 
+import importlib
+import time
+
 import sq_agents
 import sq_config
+import sq_secrets
 import sq_skills
 import sq_tui
 from sq_tui import GREEN, tabbed_view
 
-from . import (BOLD, BRAND, DIM, RST, banner_text, discover_bundles,
+from . import (BOLD, BRAND, DIM, RST, banner_text, commands_of, discover_bundles,
                run_interactive)
 from . import aggregated as ag
 from . import insights
@@ -55,16 +59,20 @@ _AGENT_EXAMPLES = [
 # Per-screen default hint (a relevant example pinned for that component).
 _CONTEXT_DEFAULT = {
     "connect": "help me connect a broker account",
+    "accounts": "help me manage or reconnect a broker account",
     "settings": "explain a setting or recommend one",
     "modules": "explain what these modules do",
 }
 _PF_COLS = ["Net Worth", "Holdings", "Net Cash", "P/L"]
+# Cap the failing-account lines under the agent's "⚠ Recommended" header so a
+# long outage list never pushes the portfolio table off the fixed-height frame.
+_MAX_WARN_LINES = 3
 
 # The home's action menu as a DECLARATION (composable doctrine rule 2) —
 # the selection keys route in run_home's dispatch. A future shell (web,
 # alternative TUI) renders this same list; code never hard-wires the rows.
 HOME_MENU = [
-    ("Connect to Broker Account", "connect"),
+    ("Portfolio Accounts", "accounts"),
     ("Settings", "config"),
     ("Modules", "modules"),
     ("Quit", "quit"),
@@ -215,6 +223,199 @@ def _connect_flow(root, available):
     print(_static_chrome(root, "connect", "Connect to Broker Account", sel))
     print()
     _run_wrapper(wrappers[sel], "setup")
+
+
+# ── Portfolio Accounts: manage connected accounts ──────────────────────────
+def _broker_module(broker):
+    """Import a broker's Python package (`sq_<broker>`) — the same naming
+    convention `aggregated._discover_brokers` uses. None if it won't import
+    (so callers degrade rather than crash)."""
+    try:
+        return importlib.import_module("sq_" + broker.replace("-", "_"))
+    except Exception:                                       # noqa: BLE001
+        return None
+
+
+def _loading_fetch_one(root, label):
+    """Fetch ONE account fresh, with the standard visible progress screen.
+    Scopes the fetch to `label` (`_collect_snapshots(only=…)`) so no other
+    broker is poked — a per-login-approval account never fires a phone push
+    from a refresh of a different one. Returns the snapshots (or [])."""
+    return sq_tui.loading_screen(
+        [label],
+        lambda cb: ag._collect_snapshots(
+            root, use_snapshot_cache=False, only=label, on_update=cb),
+        header=banner_text(root), title="refreshing…") or []
+
+
+def _account_detail_view(root, label, brokers):
+    """Open ONE account's portfolio/analytics view (its own base currency).
+    Reuses the home's `_portfolio_view`; ^R inside re-fetches just this
+    account. If the account isn't in `brokers` yet (or is degraded), fetch
+    it fresh first; if it still won't load, return quietly (the problem
+    surfaces on the home/accounts list)."""
+    one = [b for b in brokers if b.ok and b.broker == label]
+    if not one:
+        fresh = _loading_fetch_one(root, label)
+        one = [b for b in fresh if b.ok and b.broker == label]
+        if not one:
+            return
+    base = one[0].snapshot.account.base_currency
+
+    def _rebuild(label=label, base=base):
+        fresh = _loading_fetch_one(root, label)
+        sub = [b for b in fresh if b.ok and b.broker == label]
+        if not sub:
+            return None
+        with sq_tui.quiet():
+            t, _ti, _a = ag.build_aggregate(
+                root, sub, display_currency=base, daily=True)
+        return t, []
+
+    with sq_tui.quiet():
+        tabs, _title, _ = ag.build_aggregate(
+            root, one, display_currency=base, daily=True)
+    _portfolio_view(root, tabs, label, rebuild=_rebuild)
+
+
+def _confirm_delete(root, label):
+    """Destructive-action confirm: a two-item full-screen pick where Cancel
+    is the pre-selected (first) row, so a stray Enter never deletes. Returns
+    True only on the explicit 'remove' choice (Esc → BACK → False)."""
+    sel = _chrome_select(
+        root, "accounts", ("Portfolio Accounts", label, "remove"),
+        [("Cancel", "cancel"), (f"Yes, remove {label}", "remove")],
+        intro=[f"Remove {label}? This deletes its stored credentials and",
+               "login session from this machine. Your downloaded history",
+               "(data/ CSVs) is NOT touched.", ""],
+        footer_hint="↑↓ move · enter select · esc cancel")
+    return sel == "remove"
+
+
+def _delete_account(root, broker, account, wrapper, cmds):
+    """Remove a connected account. Preferred path: the bundle's own `forget`
+    command (symmetric with `setup` — it scrubs keychain AND its .env AND the
+    session AND the registry). Fallback for a bundle without `forget`: the
+    generic `sq_secrets.forget_account` over the bundle's declared
+    `SECRET_KEYS` (keychain + session + registry) — honest about the .env
+    gap. Returns a one-line outcome string for the caller to show."""
+    if wrapper is not None and "forget" in cmds:
+        sq_tui.clear_screen()
+        label = f"{broker}:{account}" if account else broker
+        print(_static_chrome(root, "accounts",
+                              "Portfolio Accounts", label, "remove"))
+        print()
+        args = ["forget"] + (["--account", account] if account else [])
+        _run_wrapper(wrapper, *args)
+        return None
+    # Generic fallback — bundle hasn't added a `forget` command yet.
+    mod = _broker_module(broker)
+    service = getattr(mod, "SERVICE", f"sq-{broker}")
+    keys = list(getattr(mod, "SECRET_KEYS", []))
+    sq_secrets.forget_account(service, account, keys)
+    label = f"{broker}:{account}" if account else broker
+    if not keys:
+        note = (f"\n  {DIM}(no credential manifest — you may need to clear "
+                f"this broker's stored secrets manually){RST}")
+    else:
+        note = (f"\n  {DIM}note: an .env fallback (if used) isn't scrubbed by "
+                f"the generic path — delete it manually if present{RST}")
+    sq_tui.clear_screen()
+    print(_static_chrome(root, "accounts", "Portfolio Accounts", label, "remove"))
+    print(f"\n  {GREEN}✓{RST} removed {label}{note}")
+    try:
+        input(f"\n  {DIM}[enter to return]{RST} ")
+    except (EOFError, KeyboardInterrupt):
+        pass
+    return None
+
+
+def _account_actions(root, label, brokers):
+    """Manage ONE connected account (full-screen drill-down): view its
+    portfolio, refresh it, reconnect (re-enter credentials), or delete it.
+    The available actions DERIVE from the bundle's advertised commands
+    (`commands_of` — discovery over enumeration), so no per-broker logic is
+    hard-wired here. When THIS account failed its last fetch, the agent
+    component switches to warning mode: a recommended 'Troubleshoot with
+    Agent' line on top, and the agent row launches a troubleshoot session
+    scoped to just this account (the deeper `sciqnt <broker> doctor
+    probe|fix-totp` diagnostics stay at the CLI, not in this menu). Returns
+    'deleted' when the account was removed, else None on back."""
+    broker, account = ag._broker_label_split(label)
+    wrapper = _wrappers(root).get(broker)
+    cmds = {c for c, _d, _a in commands_of(wrapper)} if wrapper else set()
+    while True:
+        # Re-derive the failure state each loop — a Refresh may have fixed it.
+        failed = [b for b in (brokers or [])
+                  if b.broker == label and not b.ok]
+        recommend = (f"Troubleshoot with Agent ({label} couldn't fetch)"
+                     if failed else None)
+        items = [("View portfolio", "view"), ("Refresh", "refresh")]
+        if "setup" in cmds:
+            items.append(("Reconnect / re-enter credentials", "reconnect"))
+        items.append(("Delete account", "delete"))
+        sel = _chrome_select(
+            root, "accounts", ("Portfolio Accounts", label), items,
+            recommend=recommend, failed=failed or None,
+            footer_hint="↑↓ move · ←→ switch agent · enter select · esc back")
+        if sel == sq_tui.BACK:
+            return None
+        if sel == "view":
+            _account_detail_view(root, label, brokers)
+        elif sel == "refresh":
+            fresh = _loading_fetch_one(root, label)
+            if fresh:
+                brokers = fresh                      # refresh the status glyphs
+        elif sel == "reconnect" and wrapper is not None:
+            sq_tui.clear_screen()
+            print(_static_chrome(root, "accounts",
+                                 "Portfolio Accounts", label, "reconnect"))
+            print()
+            _run_wrapper(wrapper, "setup",
+                         *(["--account", account] if account else []))
+        elif sel == "delete":
+            if _confirm_delete(root, label):
+                _delete_account(root, broker, account, wrapper, cmds)
+                return "deleted"
+
+
+def _accounts_flow(root, brokers, available):
+    """Portfolio Accounts — the connection-management surface (distinct from
+    the home's portfolio table, which is the analytics drill-in). Lists the
+    user's CONNECTED accounts (each → per-account actions) and ends with a
+    'Connect new Account' row that runs the existing connect flow.
+
+    The list is RE-DERIVED from `ag._discover_brokers` each loop (discovery
+    over enumeration) so a connect/delete reflects immediately. Status glyphs
+    (✓ connected / ⚠ needs attention / · not loaded) are best-effort from the
+    current snapshots. The demo void-filler isn't a real account, so it's
+    never listed here."""
+    while True:
+        connected = [lbl for lbl, _ in ag._discover_brokers(root)
+                     if ag._broker_label_split(lbl)[0] != "demo"]
+        status = {b.broker: b.ok for b in (brokers or [])}
+        items, styles = [], []
+        for lbl in connected:
+            ok = status.get(lbl)
+            glyph = "✓" if ok else ("⚠" if ok is False else "·")
+            items.append((f"{glyph}  {lbl}", ("acct", lbl)))
+            styles.append(None)
+        if connected:
+            items.append(("", sq_tui.SEP))
+            styles.append(None)
+        items.append(("Connect new Account", "connect"))
+        styles.append(None)
+        sel = _chrome_select(
+            root, "accounts", ("Portfolio Accounts",), items,
+            item_styles=styles,
+            intro=None if connected else ["No accounts connected yet."],
+            footer_hint="↑↓ move · ←→ switch agent · enter open · esc back")
+        if sel == sq_tui.BACK:
+            return
+        if sel == "connect":
+            _connect_flow(root, available)
+        elif isinstance(sel, tuple) and sel[0] == "acct":
+            _account_actions(root, sel[1], brokers or [])
 
 
 def _settings_flow(root):
@@ -443,7 +644,7 @@ def _agent_hint(context):
     return f'   Ask "{ex}"'
 
 
-def _agent_rows(context, warnings=None):
+def _agent_rows(context, warnings=None, recommend=None):
     """The reusable SciQnt Agent component for ANY screen: the framework-selector
     row + a context-aware greyed hint. Returns (rows, styles, toggle, installed)
     — prepend `rows`/`styles` to a screen's items and pass `toggle` to
@@ -452,9 +653,15 @@ def _agent_rows(context, warnings=None):
 
     WARNING MODE (`warnings` = plain-text problem lines): SAME layout and
     toggle as the healthy state — only the greyed Ask-hint slot is replaced
-    by an orange "⚠ Troubleshoot with Agent:" block listing the issues.
-    Enter on the row then launches the troubleshoot session with the toggled
-    framework (callers route sel "agent" via `_agent_warn_activate`)."""
+    by an orange "⚠ Recommended: Troubleshoot with Agent" header + the issue
+    lines beneath (capped at `_MAX_WARN_LINES`, the rest folded into a
+    "…and N more"). Enter on the row launches the troubleshoot session with
+    the toggled framework (callers route sel "agent" via `_agent_warn_activate`).
+
+    RECOMMEND MODE (`recommend` = one short string): a single orange
+    "⚠ Recommended: <…>" line in place of the hint — for a focused screen
+    (e.g. ONE failing account) where a one-liner reads better than the
+    multi-line problem block. Same agent-row routing as warning mode."""
     installed = sq_agents.recent_installed()     # MRU order: last-used first
     labels = [sq_agents.label(n) for n in installed]
     options = labels + ["More"]
@@ -466,15 +673,26 @@ def _agent_rows(context, warnings=None):
               "selected": 0}
     rows = [(agent_label, "agent")]
     styles = [None]
-    if warnings:
-        # Style class, NOT baked ANSI: select_screen renders SEP rows through
-        # prompt_toolkit fragments, where the row's class wins (a None style
-        # falls back to class:head = bold white) and raw ESC codes are
-        # discarded — the "warn" class is what actually paints it orange.
-        rows.append(("   ⚠ Troubleshoot with Agent:", sq_tui.SEP))
+    # Style class, NOT baked ANSI: select_screen renders SEP rows through
+    # prompt_toolkit fragments, where the row's class wins (a None style falls
+    # back to class:head = bold white) and raw ESC codes are discarded — the
+    # "warn" class is what actually paints it orange.
+    if recommend:
+        rows.append((f"   ⚠ Recommended: {recommend}", sq_tui.SEP))
         styles.append("warn")
-        for w in warnings:
+    elif warnings:
+        # "Recommended" framing (consistent with the single-account screen):
+        # a header line + the problem lines indented beneath, capped so a long
+        # outage list can't push the portfolio table off the frame.
+        rows.append(("   ⚠ Recommended: Troubleshoot with Agent", sq_tui.SEP))
+        styles.append("warn")
+        shown = warnings[:_MAX_WARN_LINES]
+        for w in shown:
             rows.append((f"      {w}", sq_tui.SEP))
+            styles.append("warn")
+        if len(warnings) > _MAX_WARN_LINES:
+            rows.append((f"      …and {len(warnings) - _MAX_WARN_LINES} more",
+                         sq_tui.SEP))
             styles.append("warn")
     else:
         rows.append((_agent_hint(context), sq_tui.SEP))
@@ -517,15 +735,21 @@ def _agent_activate(root, context, installed, idx=None, facts=None):
 
 
 def _chrome_select(root, context, crumbs, items, item_styles=None, *,
-                   selected=0, footer_hint=None, intro=None):
+                   selected=0, footer_hint=None, intro=None,
+                   recommend=None, failed=None):
     """`select_screen` wrapped in the standard chrome every level shares:
     banner → SciQnt Agent component (context-aware, fully interactive) →
     'Menu › …' header (+ optional greyed `intro` lines) → `items`. Handles the
     agent row internally (launch, then re-render); returns any other selection
     (BACK included). The cursor starts on the FIRST item (not the agent row);
-    the index relative to `items` is exposed as `_chrome_select.last_index`."""
+    the index relative to `items` is exposed as `_chrome_select.last_index`.
+
+    `recommend` (a short string) + `failed` (the degraded BrokerSnapshots)
+    put the agent component in warning mode: a "⚠ Recommended: …" line, and
+    the agent row launches a troubleshoot session for `failed` instead of the
+    plain summon."""
     while True:
-        rows, styles, toggle, installed = _agent_rows(context)
+        rows, styles, toggle, installed = _agent_rows(context, recommend=recommend)
         head = rows + [("", sq_tui.SEP), _menu_header(*crumbs)]
         head_styles = styles + [None, None]
         for line in (intro or []):
@@ -539,7 +763,10 @@ def _chrome_select(root, context, crumbs, items, item_styles=None, *,
             or "↑↓ move · ←→ switch agent · enter select · esc back",
             help_lines=_HELP_SUB, esc_result=sq_tui.BACK)
         if sel == "agent":
-            _agent_activate(root, context, installed)
+            if failed:
+                _agent_warn_activate(root, installed, failed)
+            else:
+                _agent_activate(root, context, installed)
             continue
         li = getattr(sq_tui.select_screen, "last_index", 0)
         _chrome_select.last_index = (max(0, li - len(head))
@@ -620,10 +847,32 @@ def _loading_fetch(root, *, fresh):
         header=banner_text(root), title=title) or []
 
 
+def _wake_app(app_holder, result, *, tries=100, interval=0.1):
+    """Ask the on-screen select_screen Application to exit with `result` so
+    the home loop re-renders. A background worker can finish BEFORE
+    `app.run()` has a live event loop (fast fetch beats first paint) — calling
+    `app.exit()` then is a silent no-op and the user is stuck until a manual
+    keypress. So poll until the app is actually running, then exit it. If it
+    never runs (the user already left), give up quietly — the result still
+    sits in `pending` and is adopted on the next loop iteration."""
+    for _ in range(tries):
+        app = app_holder[0]
+        if app is not None and getattr(app, "is_running", False):
+            try:
+                app.loop.call_soon_threadsafe(
+                    lambda a=app: a.exit(result=result))
+                return
+            except Exception:                              # noqa: BLE001
+                return
+        time.sleep(interval)
+
+
 def _start_bg_refresh(root, pending, app_holder):
     """Refresh all brokers live in a background thread (stale-while-revalidate).
-    Stores the result in `pending['v']` and, if the home's select_screen is
-    running (app_holder set), exits it so the loop re-renders with fresh data."""
+    Stores the result in `pending['v']` and exits the home's running
+    select_screen so the loop re-renders with fresh data — including any
+    broker that's currently FAILING (failures aren't cached, so they're
+    invisible on the instant warm paint and only surface once this lands)."""
     def _bg():
         try:
             # quiet() suppresses broker chatter; safe concurrently with the home
@@ -633,13 +882,7 @@ def _start_bg_refresh(root, pending, app_holder):
         except Exception:                                  # noqa: BLE001
             pass
         finally:
-            app = app_holder[0]
-            if app is not None:
-                try:
-                    app.loop.call_soon_threadsafe(
-                        lambda: app.exit(result=_BG_REFRESH))
-                except Exception:                          # noqa: BLE001
-                    pass
+            _wake_app(app_holder, _BG_REFRESH)
     threading.Thread(target=_bg, daemon=True).start()
 
 
@@ -662,13 +905,7 @@ def _start_chart_compute(brokers, ccy, range_label, chart_cache,
             chart_cache[range_label] = ""
         finally:
             computing.discard(range_label)
-            app = app_holder[0]
-            if app is not None:
-                try:
-                    app.loop.call_soon_threadsafe(
-                        lambda: app.exit(result=_BG_REFRESH))
-                except Exception:                      # noqa: BLE001
-                    pass
+            _wake_app(app_holder, _BG_REFRESH)
     threading.Thread(target=_bg, daemon=True).start()
 
 
@@ -687,6 +924,7 @@ def run_home(root, *, use_snapshot_cache: bool = True) -> int:
     brokers = None                               # data to render (None → acquire)
     from_cache = stale = False                   # render provenance / freshness
     refreshing = [False]                         # a bg refresh is in flight
+    did_initial = [False]                        # the session's first revalidation ran
     pending: dict = {}                           # bg-refresh result holder
     chart_range = ["YTD"]                        # home chart range (toggle)
     chart_cache: dict = {}                       # range → ANSI block ("" = n/a)
@@ -698,12 +936,20 @@ def run_home(root, *, use_snapshot_cache: bool = True) -> int:
             brokers, from_cache, stale, refreshing[0] = pending.pop("v"), False, False, False
             chart_cache.clear()                  # fresh data → recompute charts
 
-        # Acquire data when needed. Warm path = INSTANT from cache (any age);
-        # cold start / ^R = a visible PARALLEL fetch (loading screen). Stale
-        # cache renders immediately, then a background refresh updates in place.
+        # Acquire data when needed.
+        #  • FIRST load (and ^R / --fresh) → a visible LIVE fetch (loading
+        #    screen): the user opening the app expects current totals, and a
+        #    broker that's failing RIGHT NOW must surface its ⚠ immediately —
+        #    a stale warm-cache paint would hide both until a later manual
+        #    refresh. Live broker sessions are reused (no re-login while the
+        #    session is valid), so this isn't a re-auth on every launch.
+        #  • LATER re-acquisitions (returning from a submenu) → INSTANT warm
+        #    cache, with a background revalidate when it's gone stale.
         if brokers is None:
-            if fresh_next:
-                brokers, from_cache, stale, fresh_next = _loading_fetch(root, fresh=True), False, False, False
+            if fresh_next or not did_initial[0]:
+                brokers, from_cache, stale = _loading_fetch(root, fresh=True), False, False
+                fresh_next = False
+                did_initial[0] = True
             else:
                 cached, is_stale = ag._collect_cached(root)
                 if cached:
@@ -726,8 +972,8 @@ def run_home(root, *, use_snapshot_cache: bool = True) -> int:
             body_intro = ""                                  # table header goes IN items
         else:
             last_tabs = None
-            body_intro = (f"\n  {DIM}No accounts connected yet — Connect to Broker Account "
-                          f"to see your portfolio.{RST}")
+            body_intro = (f"\n  {DIM}No accounts connected yet — open Portfolio Accounts "
+                          f"› Connect new Account to see your portfolio.{RST}")
         # Trailing blank line → one row of breathing space between the logo and
         # the agent selector row below.
         header = banner_text(root) + body_intro + "\n"
@@ -804,9 +1050,11 @@ def run_home(root, *, use_snapshot_cache: bool = True) -> int:
             items = head + [("", sq_tui.SEP)] + menu + actions
             item_styles = head_styles + [None] + menu_styles + [None] * len(actions)
 
-        # Stale cache on screen → refresh live in the background and update in
-        # place when it lands. Once (only while showing cache); the refresh
-        # writes through to the cache so the next acquire is fresh.
+        # A warm (returning-to-home) paint that's gone stale → revalidate live
+        # in the background and update in place when it lands (the refresh
+        # writes through, so the next acquire is fresh). The session's FIRST
+        # paint is already a visible live fetch above, so this only covers
+        # later re-acquisitions.
         app_holder = [None]
         if from_cache and stale and not refreshing[0]:
             refreshing[0] = True
@@ -891,8 +1139,8 @@ def run_home(root, *, use_snapshot_cache: bool = True) -> int:
                     tabs, title, _ = ag.build_aggregate(
                         root, one, display_currency=base, daily=True)
                 _portfolio_view(root, tabs, sel[1], rebuild=_rebuild_account)
-        elif sel == "connect":
-            _connect_flow(root, available)
+        elif sel == "accounts":
+            _accounts_flow(root, brokers, available)
         elif sel == "config":
             _settings_flow(root)
         elif sel == "modules":

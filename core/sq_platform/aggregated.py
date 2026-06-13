@@ -611,7 +611,11 @@ def _fetch_one(name, snapshot_fn, asof, use_snapshot_cache, emit
             break
         except Exception as e:                             # noqa: BLE001
             last_err = e
-            if type(e).__name__ == "CredentialsMissing":
+            # Not retryable: "not connected" (CredentialsMissing) and "the user
+            # must act" (NeedsAction — e.g. approve the login in the app). A
+            # retry can't fix either, and re-attempting a login would re-fire
+            # the in-app push every time. Surface them immediately.
+            if type(e).__name__ in ("CredentialsMissing", "NeedsAction"):
                 break
             if attempt + 1 < attempts:
                 emit(name, f"retry {attempt + 2}/{attempts} ({type(e).__name__})")
@@ -886,25 +890,30 @@ def _summary_tab(brokers, agg, display_ccy: str,
 
 
 def account_problem_text(b) -> str:
-    """The plain-language sentence for a failing account: what's wrong + what
-    to do. The single place that translates connector failure dialects into
-    user terms (home, portfolio and CLI all say the same words); raw
-    exception text never reaches the screen (research/connect-experience.md).
-    Uncolored — callers style it for their surface (the home component shows
-    it in warning orange, the summary tab adds the ⚠/dim severity)."""
+    """The plain-language SYMPTOM for a failing account — honest about what we
+    OBSERVE, not a prescriptive remedy we can't be sure of. Anything
+    non-obvious is best handed to the agent (the home/portfolio recommend it,
+    and it gets the full error + the tools — `sciqnt <broker> live --fresh`,
+    `doctor` — to investigate) rather than pigeonholing the user into one
+    guessed fix. The ONLY action we name outright is the certain one: a
+    not-connected account → connect it. Raw exception text never reaches the
+    screen — it lives behind the ? detail note (research/connect-experience.md).
+    Uncolored — callers style it (home: warning orange; summary tab: ⚠/dim)."""
     err = b.error or ""
-    broker = b.broker.split(":", 1)[0]
     if err.startswith("CredentialsMissing"):
         return (f"{b.broker} isn't connected — "
-                f"Connect to Broker Account › {broker}")
-    if err.startswith("NeedsAction"):
-        msg = err.split(":", 1)[1].strip() if ":" in err else "action needed"
-        return f"{b.broker} needs you — {msg}"
+                f"Portfolio Accounts › Connect new Account")
     if err.startswith("conformance:"):
-        # Money-math integrity — never shown as healthy data (P17).
+        # Money-math integrity — fetched but REJECTED, never shown as healthy
+        # data (P17); distinct from a fetch failure.
         return (f"{b.broker} data failed integrity checks — "
-                f"not shown (^R to retry; ? for detail)")
-    return f"{b.broker} couldn't fetch — ^R to retry (? for detail)"
+                f"not shown (? for detail)")
+    # Everything else — a dropped/blocked session, an auth challenge, a
+    # transient network fault, an unknown error — is a symptom to investigate,
+    # not a known fix. Just state it; the agent (recommended above) diagnoses,
+    # and the raw cause stays behind the ? detail note. We deliberately stop at
+    # "couldn't fetch" rather than guessing a reason or a remedy.
+    return f"{b.broker} couldn't fetch"
 
 
 def _account_problem(b) -> str:

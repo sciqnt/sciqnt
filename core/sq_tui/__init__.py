@@ -854,13 +854,16 @@ def tabbed_view(tabs, title=None, *, header="", agent=None, menu_label=None,
             out.append(("class:agent-sel" if on else "", opt))
         out.append(("", "\n"))
         # Warning mode: the greyed Ask-hint slot becomes an orange
-        # "Troubleshoot with Agent" block listing the issues; same layout
-        # (row first), same toggle — only the hint is replaced.
+        # "⚠ Recommended: Troubleshoot with Agent" block listing the issues;
+        # same layout (row first), same toggle — only the hint is replaced.
+        # Capped so a long outage list can't push the body off the frame.
         warns = agent.get("warn") or []
         if warns:
-            out.append(("class:warn", "   ⚠ Troubleshoot with Agent:\n"))
-            for w in warns:
+            out.append(("class:warn", "   ⚠ Recommended: Troubleshoot with Agent\n"))
+            for w in warns[:3]:
                 out.append(("class:warn", f"      {w}\n"))
+            if len(warns) > 3:
+                out.append(("class:warn", f"      …and {len(warns) - 3} more\n"))
         else:
             out.append(("class:hint", f"   {agent['hint']}\n"))
         out.append(("", "\n"))
