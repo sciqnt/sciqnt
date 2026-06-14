@@ -90,6 +90,44 @@ def _conformance(bundle: Path, root: Path) -> tuple[bool, str]:
     return False, (r.stderr or r.stdout or "tests failed").strip().splitlines()[-1]
 
 
+def _manifest_facts(bundle: Path) -> dict:
+    """The few manifest fields we SURFACE at install/list — risk_tier, endorsed,
+    provenance (worst flavour risk), status — read line-by-line so the installer
+    stays YAML-dependency-free (full parsing belongs to the conformance harness,
+    not here). Provenance is the trust signal: official-api > csv/file >
+    reverse-engineered."""
+    facts = {"risk_tier": "?", "endorsed": None, "status": "",
+             "provenance": "n/a", "has_notice": (bundle / "NOTICE.md").is_file()}
+    mf = bundle / "manifest.yaml"
+    if not mf.is_file():
+        return facts
+    risks = set()
+    for raw in mf.read_text().splitlines():
+        s = raw.split("#", 1)[0].strip()           # drop inline comments
+        if ":" not in s:
+            continue
+        key, _, val = s.partition(":")
+        key, val = key.strip(), val.strip()
+        if key == "risk_tier" and val:
+            facts["risk_tier"] = val
+        elif key == "status" and val:
+            facts["status"] = val
+        elif key == "endorsed" and val:
+            facts["endorsed"] = val.lower() == "true"
+        elif key == "risk" and val:                # per-flavour provenance
+            risks.add(val)
+    facts["provenance"] = ("reverse-engineered" if "reverse-engineered" in risks
+                           else "official" if "official" in risks else "n/a")
+    return facts
+
+
+def _facts_line(facts: dict) -> str:
+    """One dim, honest summary line: provenance · risk_tier · endorsement."""
+    endorse = ("" if facts["endorsed"] is None
+               else " · endorsed" if facts["endorsed"] else " · not endorsed")
+    return f"{facts['provenance']} · risk_tier={facts['risk_tier']}{endorse}"
+
+
 def add(spec: str, root: Path) -> int:
     print(f"  fetching {BOLD}{spec}{RST}…")
     tmp = Path(tempfile.mkdtemp(prefix="sciqnt-add-"))
@@ -109,7 +147,13 @@ def add(spec: str, root: Path) -> int:
         for b in bundles:
             name = b.name if b.name.startswith("sq-") else \
                 "sq-" + next(iter((b / "src").glob("sq_*"))).name[3:].replace("_", "-")
-            print(f"  found {BOLD}{name}{RST} — running conformance…")
+            facts = _manifest_facts(b)
+            print(f"  found {BOLD}{name}{RST}  {DIM}{_facts_line(facts)}{RST}")
+            if facts["provenance"] == "reverse-engineered" and not facts["has_notice"]:
+                print(f"    {DIM}⚠ reverse-engineered, no NOTICE.md disclaimer — "
+                      f"community connectors should ship one "
+                      f"(research/connector-publishing.md){RST}")
+            print("  running conformance…")
             passed, msg = _conformance(b, root)
             mark = "✓" if passed else "✗"
             print(f"    {mark} {msg}")
@@ -156,7 +200,8 @@ def list_installed(root: Path) -> int:
         return 0
     print(f"  community connectors ({base}):")
     for b in bundles:
-        print(f"    {b.name.replace('sq-', '', 1)}")
+        facts = _manifest_facts(b)
+        print(f"    {b.name.replace('sq-', '', 1)}  {DIM}{_facts_line(facts)}{RST}")
     return 0
 
 

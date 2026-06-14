@@ -74,5 +74,30 @@ class TestConnectorIndex(unittest.TestCase):
         self.assertEqual(modules_cmd.find("anything", empty), 0)
 
 
+class TestProvenanceSurfacing(unittest.TestCase):
+    """`modules add`/`list` surface the manifest's trust signals (provenance,
+    risk_tier, endorsement) so install is informed consent — read without a
+    YAML dependency."""
+
+    def test_official_vs_reverse_engineered(self):
+        kalshi = modules_cmd._manifest_facts(ROOT / "modules/sq-kalshi")
+        self.assertEqual(kalshi["provenance"], "official")
+        degiro = modules_cmd._manifest_facts(ROOT / "modules/sq-degiro")
+        self.assertEqual(degiro["provenance"], "reverse-engineered")
+
+    def test_facts_line_is_honest(self):
+        line = modules_cmd._facts_line(
+            {"provenance": "reverse-engineered", "risk_tier": "read",
+             "endorsed": False})
+        self.assertIn("reverse-engineered", line)
+        self.assertIn("not endorsed", line)
+
+    def test_missing_manifest_degrades(self):
+        import tempfile
+        facts = modules_cmd._manifest_facts(Path(tempfile.mkdtemp()))
+        self.assertEqual(facts["provenance"], "n/a")
+        self.assertIsNone(facts["endorsed"])
+
+
 if __name__ == "__main__":
     unittest.main()
