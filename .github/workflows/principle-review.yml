@@ -44,6 +44,10 @@ jobs:
           # Subscription auth (long-lived token from `claude setup-token`),
           # not a console API key — see CONTRIBUTING / owner setup.
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          # Use the workflow's own GITHUB_TOKEN for GitHub API calls (posting the
+          # review) instead of the OIDC→Claude-App token exchange, which 401s
+          # here. `permissions:` above scopes it (pull-requests: write).
+          github_token: ${{ github.token }}
           track_progress: true
           prompt: |
             You are the principle-alignment reviewer for sciqnt

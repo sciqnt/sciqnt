@@ -46,6 +46,9 @@ jobs:
         with:
           # Subscription auth (long-lived token from `claude setup-token`).
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          # Use the workflow GITHUB_TOKEN directly (skip the OIDC→Claude-App
+          # token exchange, which 401s here). `permissions:` above scopes it.
+          github_token: ${{ github.token }}
           trigger_phrase: "@claude"
           prompt: |
             You are working in sciqnt (github.com/sciqnt/sciqnt). Before any
