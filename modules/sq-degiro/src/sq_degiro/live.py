@@ -28,8 +28,8 @@ import sq_analytics                                                  # noqa: E40
 import sq_fx                                                         # noqa: E402
 from sq_schema import AssetClass, PortfolioSnapshot                  # noqa: E402
 from sq_secrets import NeedsAction, get_secret, load_dotenv          # noqa: E402
-from sq_tui import (fmt_num, fmt_pct, fmt_signed, format_kv,          # noqa: E402
-                    format_table, pnl, status, tabbed_view)
+from sq_fmt import (fmt_num, fmt_pct, fmt_signed, format_kv,          # noqa: E402
+                    format_table, pnl, status)
 
 from sq_degiro.canonical import (                                    # noqa: E402
     extract_base_ccy, to_canonical,
@@ -515,6 +515,7 @@ def main(argv=None):
     tabs = _build_tabs(snapshot, raw_total_portfolio, account=account)
     title = ("degiro · live" if account is None
              else f"degiro:{account} · live")
+    from sq_tui import tabbed_view  # lazy: interactive viewer (prompt-toolkit)
     tabbed_view(tabs, title=title)
 
 

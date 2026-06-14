@@ -13,12 +13,16 @@ import subprocess
 import sys
 from pathlib import Path
 
-# Design substrate lives in sq_tui — one source of theme for ALL TUI code.
-# Credential prompts must look the same as the dispatcher menus; never
-# import `questionary` directly here for design (only call themed helpers).
-import sq_tui
+import importlib.util
 
-_HAS_Q = sq_tui.HAS_Q
+# Pure formatting tokens come from the zero-dependency sq_fmt leaf, so importing
+# sq_secrets stays prompt-toolkit-free (the headless credential path: keychain +
+# env, no prompt). The THEMED interactive prompts live in sq_tui and are imported
+# lazily, only when we actually prompt at a TTY — keeping the design one-source
+# (credential prompts match the dispatcher menus) without the import-time weight.
+from sq_fmt import BOLD, DIM, RST, err, ok  # noqa: F401
+
+_HAS_Q = importlib.util.find_spec("questionary") is not None
 
 
 class NeedsAction(RuntimeError):
@@ -54,6 +58,7 @@ def prompt_terminal(label, hidden=False):
     bold question, masked password); otherwise stdlib getpass/input fallback.
     Returns None on EOF/Ctrl-C so callers treat it as cancel."""
     if _HAS_Q and sys.stdin.isatty():
+        import sq_tui  # lazy: questionary only when actually prompting at a TTY
         try:
             q = sq_tui.themed_password(label) if hidden else sq_tui.themed_text(label)
             v = q.ask()
@@ -90,6 +95,7 @@ def select_mode():
     if not sys.stdin.isatty() or sys.platform != "darwin":
         return "terminal"
     if _HAS_Q:
+        import sq_tui  # lazy: questionary only when actually prompting at a TTY
         try:
             r = sq_tui.themed_select(
                 "How would you like to enter values?",
@@ -401,9 +407,9 @@ def prompt_and_store(service, fields, env_path=None, mode=None, verify=None,
         entrypoints; programmatic/non-interactive callers keep the plain flow.
     Secrets are never printed. Returns the list of stored (key, backend)."""
     if title:
-        print(f"\n  {sq_tui.BOLD}{title}{sq_tui.RST}")
+        print(f"\n  {BOLD}{title}{RST}")
     if note:
-        print(f"  {sq_tui.DIM}{note}{sq_tui.RST}")
+        print(f"  {DIM}{note}{RST}")
     if mode is None:
         mode = select_mode()
     print()
@@ -429,7 +435,7 @@ def prompt_and_store(service, fields, env_path=None, mode=None, verify=None,
                 val = norm(val)
             validate = f.get("validate")
             if validate and not validate(val):
-                sq_tui.err("that doesn't look right — try again "
+                err("that doesn't look right — try again "
                            "(blank to cancel)")
                 continue
             values[f["key"]] = val
@@ -437,7 +443,7 @@ def prompt_and_store(service, fields, env_path=None, mode=None, verify=None,
 
     for f in fields:
         if not _ask(f):
-            sq_tui.err("cancelled — nothing stored.")
+            err("cancelled — nothing stored.")
             sys.exit(1)
 
     def _label():
@@ -464,8 +470,8 @@ def prompt_and_store(service, fields, env_path=None, mode=None, verify=None,
         if label:
             extra = (" — already connected; this refreshes its credentials"
                      if label in list_accounts(service) else "")
-            print(f"  {sq_tui.DIM}   account name{' ' * 13}{label}{extra}"
-                  f"{sq_tui.RST}")
+            print(f"  {DIM}   account name{' ' * 13}{label}{extra}"
+                  f"{RST}")
         try:
             ans = input(f"\n  enter connect · 1-{len(fields)} edit · "
                         f"q cancel: ").strip().lower()
@@ -474,7 +480,7 @@ def prompt_and_store(service, fields, env_path=None, mode=None, verify=None,
         if ans == "":
             break
         if ans in ("q", "esc"):
-            sq_tui.err("cancelled — nothing stored.")
+            err("cancelled — nothing stored.")
             sys.exit(1)
         if ans.isdigit() and 1 <= int(ans) <= len(fields):
             _ask(fields[int(ans) - 1], editing=True)
@@ -486,29 +492,29 @@ def prompt_and_store(service, fields, env_path=None, mode=None, verify=None,
     # (interactive runs covered it in the review note above).
     if not interactive and account and account in list_accounts(service):
         broker = service.replace("sq-", "", 1)
-        print(f"\n  {sq_tui.DIM}'{account}' is already connected to {broker}. "
+        print(f"\n  {DIM}'{account}' is already connected to {broker}. "
               f"This refreshes its stored credentials — it does NOT create a "
-              f"second account.{sq_tui.RST}")
+              f"second account.{RST}")
         try:
             ans = input("  refresh its credentials? [y/N]: ").strip().lower()
         except (EOFError, KeyboardInterrupt):
             ans = ""
         if ans not in ("y", "yes"):
-            sq_tui.err("cancelled — existing credentials left unchanged.")
+            err("cancelled — existing credentials left unchanged.")
             sys.exit(1)
 
     # phase 2 — verify with the service before persisting (if a verifier exists)
     if verify is not None:
-        print(f"  {sq_tui.DIM}verifying…{sq_tui.RST}")
+        print(f"  {DIM}verifying…{RST}")
         try:
             verified = verify(values)
         except Exception as e:
-            sq_tui.err(f"verification failed: {type(e).__name__}: {e}")
+            err(f"verification failed: {type(e).__name__}: {e}")
             sys.exit(1)
         if not verified:
-            sq_tui.err("verification failed — nothing stored.")
+            err("verification failed — nothing stored.")
             sys.exit(1)
-        sq_tui.ok("verified")
+        ok("verified")
 
     # phase 3 — store (silently; only after verify passed)
     stored = []
@@ -524,7 +530,7 @@ def prompt_and_store(service, fields, env_path=None, mode=None, verify=None,
     if account:
         register_account(service, account)
 
-    sq_tui.ok(f"connected as {account}" if account
+    ok(f"connected as {account}" if account
               else f"connected to {service.replace('sq-', '', 1)}")
     # Optional bundle hook with the RESOLVED account label (it may have been
     # derived from an identity field) — e.g. degiro prepares the per-account

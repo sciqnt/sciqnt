@@ -15,10 +15,13 @@ dependencies = [
     "sciqnt-fx",
     "sciqnt-schema",
     "sciqnt-secrets",
-    "sciqnt-tui",
+    "sciqnt-fmt",
 ]
 
 [project.optional-dependencies]
+# Interactive viewer (the full-screen tabbed live view) — prompt-toolkit
+# via sciqnt-tui. The headless data path (snapshot / --json) needs none.
+tui = ["sciqnt-tui"]
 # LIVE (api) flavour — unofficial, reverse-engineered, at-your-own-risk.
 # pyotp drives TOTP MFA; keyring backs the shared credential substrate.
 live = ["robin_stocks", "pyotp", "keyring"]
@@ -32,4 +35,5 @@ where = ["src"]
 "sciqnt-fx" = { workspace = true }
 "sciqnt-schema" = { workspace = true }
 "sciqnt-secrets" = { workspace = true }
+"sciqnt-fmt" = { workspace = true }
 "sciqnt-tui" = { workspace = true }

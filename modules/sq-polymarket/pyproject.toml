@@ -12,10 +12,13 @@ license = { text = "MIT" }
 dependencies = [
     "sciqnt-schema",
     "sciqnt-secrets",
-    "sciqnt-tui",
+    "sciqnt-fmt",
 ]
 
 [project.optional-dependencies]
+# Interactive viewer (the full-screen tabbed live view) — prompt-toolkit
+# via sciqnt-tui. The headless data path (snapshot / --json) needs none.
+tui = ["sciqnt-tui"]
 # keyring backs the shared credential substrate (the wallet address is stored
 # there for consistency + multi-wallet, though it isn't secret).
 live = ["keyring"]
@@ -26,4 +29,5 @@ where = ["src"]
 [tool.uv.sources]
 "sciqnt-schema" = { workspace = true }
 "sciqnt-secrets" = { workspace = true }
+"sciqnt-fmt" = { workspace = true }
 "sciqnt-tui" = { workspace = true }

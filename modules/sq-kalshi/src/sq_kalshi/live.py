@@ -25,8 +25,8 @@ sys.path.insert(0, str(ROOT / "modules" / "sq-kalshi" / "src"))
 
 from sq_schema import AssetClass, PortfolioSnapshot                  # noqa: E402
 from sq_secrets import get_secret, load_dotenv                       # noqa: E402
-from sq_tui import (fmt_num, fmt_signed, format_kv, format_table,    # noqa: E402
-                    pnl, status, tabbed_view)
+from sq_fmt import (fmt_num, fmt_signed, format_kv, format_table,    # noqa: E402
+                    pnl, status)
 
 from sq_kalshi.canonical import to_canonical                         # noqa: E402
 
@@ -190,6 +190,7 @@ def main():
         sys.exit(str(e))
     snapshot = to_canonical(raw["positions_resp"], raw["balance_resp"],
                             market_prices=raw.get("market_prices"))
+    from sq_tui import tabbed_view  # lazy: interactive viewer (prompt-toolkit)
     tabbed_view(_build_tabs(snapshot), title="kalshi · live")
 
 

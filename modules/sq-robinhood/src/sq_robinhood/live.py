@@ -26,8 +26,8 @@ import sq_config                                                     # noqa: E40
 import sq_fx                                                         # noqa: E402
 from sq_schema import AssetClass, PortfolioSnapshot                  # noqa: E402
 from sq_secrets import get_secret, load_dotenv                       # noqa: E402
-from sq_tui import (fmt_num, fmt_signed, format_kv, format_table,    # noqa: E402
-                    pnl, status, tabbed_view)
+from sq_fmt import (fmt_num, fmt_signed, format_kv, format_table,    # noqa: E402
+                    pnl, status)
 
 from sq_robinhood.canonical import to_canonical                      # noqa: E402
 
@@ -225,6 +225,7 @@ def main():
         raw["stock_positions"], raw["instrument_map"], raw["price_map"],
         raw["crypto_positions"], raw["crypto_price_map"], raw["account_profile"],
     )
+    from sq_tui import tabbed_view  # lazy: interactive viewer (prompt-toolkit)
     tabbed_view(_build_tabs(snapshot), title="robinhood · live")
 
 

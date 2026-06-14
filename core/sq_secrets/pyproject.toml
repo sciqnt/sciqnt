@@ -11,8 +11,14 @@ license = { text = "MIT" }
 dependencies = [
     "keyring",
     "sciqnt-config",
-    "sciqnt-tui",
+    "sciqnt-fmt",
 ]
+
+[project.optional-dependencies]
+# Themed interactive credential prompts (questionary). Without this the prompt
+# path degrades to stdlib getpass/numbered-menu — the headless keychain+env
+# path needs none of it.
+tui = ["sciqnt-tui"]
 
 [tool.setuptools]
 packages = ["sq_secrets"]
@@ -22,4 +28,5 @@ sq_secrets = "."
 
 [tool.uv.sources]
     "sciqnt-config" = { workspace = true }
+    "sciqnt-fmt" = { workspace = true }
     "sciqnt-tui" = { workspace = true }

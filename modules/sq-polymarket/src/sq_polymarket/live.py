@@ -24,8 +24,8 @@ sys.path.insert(0, str(ROOT / "modules" / "sq-polymarket" / "src"))
 
 from sq_schema import PortfolioSnapshot                             # noqa: E402
 from sq_secrets import get_secret, load_dotenv                      # noqa: E402
-from sq_tui import (fmt_num, fmt_signed, format_kv, format_table,   # noqa: E402
-                    pnl, status, tabbed_view)
+from sq_fmt import (fmt_num, fmt_signed, format_kv, format_table,    # noqa: E402
+                    pnl, status)
 
 from sq_polymarket.canonical import to_canonical                    # noqa: E402
 
@@ -118,6 +118,7 @@ def main():
     except CredentialsMissing as e:
         sys.exit(str(e))
     snapshot = to_canonical(raw["positions"], cash_usdc=raw.get("cash_usdc"))
+    from sq_tui import tabbed_view  # lazy: interactive viewer (prompt-toolkit)
     tabbed_view(_build_tabs(snapshot), title="polymarket · live")
 
 

@@ -211,8 +211,8 @@ def _notify(msg):
     """Default in-app-approval notifier — sq_tui.status reaches both the
     terminal and the live TUI progress panel (via stream_output)."""
     try:
-        import sq_tui
-        sq_tui.status(msg)
+        from sq_fmt import status
+        status(msg)
     except Exception:                                       # noqa: BLE001
         print(msg)
 
