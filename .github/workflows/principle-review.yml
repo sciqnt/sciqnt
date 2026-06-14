@@ -90,20 +90,28 @@ jobs:
             --max-turns 30
             --allowedTools "Read,Glob,Grep,mcp__github_inline_comment__create_inline_comment,Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh pr comment:*)"
 
-      # Enable GitHub auto-merge ONLY when the agent's verdict is ALIGNED. The
-      # merge itself still waits for the REQUIRED CI checks (the deterministic
-      # gate) and an up-to-date branch — so the effective rule is "merge when CI
-      # passes AND the agent is aligned". This is a trusted base-branch step;
-      # the agent can't merge directly (restricted tools). Fail-safe: any verdict
-      # other than ALIGNED (incl. a missing/garbled line, or a review error)
-      # leaves the PR for a maintainer — it never force-merges.
+      # Enable GitHub auto-merge ONLY when the agent's verdict is ALIGNED, and
+      # ONLY for a TRUSTED author (OWNER/MEMBER/COLLABORATOR). The merge itself
+      # still waits for the REQUIRED CI checks (the deterministic gate) and an
+      # up-to-date branch — effective rule: "merge when CI passes AND the agent
+      # is aligned AND the author is trusted". Fail-safe: any other verdict
+      # (incl. missing/garbled, or a review error) or an untrusted author leaves
+      # the PR for a human — it never force-merges.
       #
-      # CAVEAT (recorded honestly): this makes the LLM verdict a soft merge gate.
-      # It is NOT a security boundary — a crafted prompt-injection PR that also
-      # passes CI could coax an ALIGNED. CI (tests + conformance + scrub) remains
-      # the real gate; revert by deleting this step.
+      # Why the author gate: the LLM verdict is a SOFT gate, not a security
+      # boundary — a crafted prompt-injection PR that also passes CI could coax an
+      # ALIGNED. The injection threat comes from UNTRUSTED contributors, and the
+      # agent is the last line of defense for exactly those community PRs — so we
+      # do NOT auto-merge them (a human reviews; the agent only advises). Trusted
+      # authors (you + collaborators) aren't attacking their own PRs, so auto-merge
+      # is safe there. CI (tests + conformance + scrub) remains the real gate for
+      # everyone. Revert by deleting this step.
       - name: Auto-merge when the review is aligned
-        if: always()
+        # Trusted authors only — community/fork PRs always require a human merge.
+        if: >-
+          always() &&
+          contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'),
+                   github.event.pull_request.author_association)
         env:
           GH_TOKEN: ${{ github.token }}
           PR: ${{ github.event.pull_request.number }}
