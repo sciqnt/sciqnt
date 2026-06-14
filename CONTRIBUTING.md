@@ -67,6 +67,21 @@ Independent connector repos are equally welcome — `sciqnt modules add
 owner/repo` installs by git ref and runs conformance locally. Passing
 the suite in our scheduled CI earns the **certified** tier.
 
+### Where your connector lives (the zones — read `research/connector-publishing.md`)
+
+Where a connector belongs is decided by **trust/liability**, not convenience:
+
+- **Official-API, sciqnt-owned** → propose it into this monorepo (a PR).
+- **Reverse-engineered / unofficial / ToS-bending** (e.g. an unofficial Degiro
+  or Robinhood) → it lives in **your own repo, never under the `sciqnt/` org**.
+  This is the liability firewall: such connectors are community-maintained,
+  hosted-but-not-org-owned, and **must ship an accurate `NOTICE.md`** (no
+  affiliation/endorsement, clean-room interop, at-your-own-risk, runs on your own
+  account). The scaffold emits one — keep it true. Don't open empty placeholder
+  repos under `sciqnt/`; the scaffold + generator is the funnel, and a repo
+  graduates only once it passes conformance. sciqnt indexes community connectors;
+  it does not host, own, or commercialise connectors it doesn't own.
+
 ## Everything else
 
 Bugs and small fixes: just PR with a test. Features: open an issue first —

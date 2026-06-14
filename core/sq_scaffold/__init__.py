@@ -47,6 +47,9 @@ name: {bundle}
 kind: source
 risk_tier: read              # read-only until an execute flavour is added + trust-tiered
 status: scaffold             # scaffold → proof (fixture-green) → v1 (real-creds run)
+endorsed: false              # community connectors are NOT sciqnt-endorsed; trust is
+                             # earned by passing conformance, never claimed here
+disclaimer: NOTICE.md        # REQUIRED to stay accurate for reverse-engineered flavours
 schema_version: 0
 broker: {broker}
 asset_classes: []            # e.g. [EQUITY], [CRYPTO], [EVENT] — set what this broker holds
@@ -63,6 +66,35 @@ honest_gaps:
   - not_implemented          # remove as you implement; keep the ones that stay true
 known_quirks: FINDINGS.md
 license: MIT
+"""
+
+
+def _notice(bundle: str, broker: str) -> str:
+    return f"""# {bundle} — NOTICE & disclaimer
+
+This is a **community-maintained sciqnt connector**. Keep this file accurate —
+it is the liability firewall, and the principle-review gate checks for it.
+
+## No endorsement / no affiliation
+This connector is **not affiliated with, authorised by, or endorsed by {broker}**,
+nor (unless it lives in the official `sciqnt/` org) by the sciqnt project. "{broker}"
+and other product names are trademarks of their respective owners, used here only
+to identify the integration target (nominative use) — not to imply any association.
+
+## If this is a reverse-engineered / unofficial flavour
+- It is a **clean-room interoperability** re-implementation of a data interface,
+  built to let the user read **their own account** with **their own credentials**.
+- It is provided **as-is, at your own risk, with no warranty**. It may break when
+  the source changes. You are responsible for complying with {broker}'s terms.
+- It must live in the **contributor's own repository**, NOT under the `sciqnt/`
+  org (the liability firewall — see `research/connector-publishing.md`). The
+  sciqnt project indexes such connectors; it does not host, own, or commercialise
+  connectors it doesn't own.
+
+## Sovereignty
+Runs locally on the user's device, on their own credentials. No data or keys are
+sent to sciqnt or any third party by this connector. You can remove it anytime
+(`sciqnt modules remove {bundle}`) and keep everything.
 """
 
 
@@ -388,6 +420,7 @@ def build(root, broker: str, *, base: str = STAGING, force: bool = False) -> Pat
         raise FileExistsError(f"{dest} already exists")
 
     _write(dest / "manifest.yaml", _manifest(bundle, broker))
+    _write(dest / "NOTICE.md", _notice(bundle, broker))
     _write(dest / "SKILL.md", _skill(bundle, broker))
     _write(dest / "FINDINGS.md", _findings(broker))
     _write(dest / "pyproject.toml", _pyproject(bundle, pkg))

@@ -45,11 +45,21 @@ class TestBuild(unittest.TestCase):
         base = sq_scaffold.build(self.root, "Acme Broker")
         rels = {str(p.relative_to(base)) for p in base.rglob("*") if p.is_file()}
         self.assertEqual(rels, {
-            "manifest.yaml", "SKILL.md", "FINDINGS.md", "pyproject.toml",
-            "GENERATE.md", "bin/sq-acme-broker",
+            "manifest.yaml", "NOTICE.md", "SKILL.md", "FINDINGS.md",
+            "pyproject.toml", "GENERATE.md", "bin/sq-acme-broker",
             "src/sq_acme_broker/__init__.py", "src/sq_acme_broker/canonical.py",
             "src/sq_acme_broker/live.py", "tests/test_canonical.py",
         })
+
+    def test_scaffold_ships_liability_firewall(self):
+        """The scaffold emits a NOTICE disclaimer + an honest non-endorsement
+        manifest field — the liability firewall the governance framework
+        requires for community/reverse-engineered connectors."""
+        base = sq_scaffold.build(self.root, "Acme")
+        self.assertIn("endorsed: false", (base / "manifest.yaml").read_text())
+        notice = (base / "NOTICE.md").read_text()
+        self.assertIn("not affiliated", notice.lower())
+        self.assertIn("contributor's own repository", notice)
 
     def test_init_exposes_discovery_contract(self):
         base = sq_scaffold.build(self.root, "Acme")
