@@ -17,6 +17,23 @@ style) is a one-file edit here that propagates everywhere.
 import os
 import re
 
+# The public formatting contract — what other units may rely on. The underscore
+# helpers (`_vlen`, `_vpad`, `_c`, …) are internal; `sq_tui` imports a couple of
+# them explicitly for back-compat, but they are not part of this surface.
+__all__ = [
+    # ANSI tokens / colour
+    "NO_COLOR", "BOLD", "DIM", "CYAN", "GREEN", "RED", "YELLOW", "RST",
+    "ACCENT_HEX", "WARN_HEX", "ACCENT", "BRAND", "ORANGE", "ANSI_RE",
+    # status / message helpers
+    "ok", "err", "warn_line", "heading", "status", "pnl",
+    # number formatters
+    "fmt_num", "fmt_signed", "fmt_pct",
+    # charts (data → text adapters)
+    "render_chart", "render_history", "render_pl_bars",
+    # tables / key-value blocks
+    "format_table", "print_table", "format_kv", "print_kv",
+]
+
 # Honour NO_COLOR (https://no-color.org): any value present → suppress colour.
 NO_COLOR = bool(os.environ.get("NO_COLOR"))
 
