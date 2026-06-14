@@ -14,6 +14,7 @@ in by typing the command; community connectors are "not endorsed" until they
 pass conformance in our CI (the certified tier). Read-only connectors only;
 execute flavours are a separate, higher tier.
 """
+import json
 import shutil
 import subprocess
 import sys
@@ -159,12 +160,57 @@ def list_installed(root: Path) -> int:
     return 0
 
 
+def find(query: str, root: Path) -> int:
+    """Search the OPTIONAL connector index (`connectors-index.json`) — a thin,
+    checked-in discovery catalog, NOT a registry. Discovery is optional and
+    sovereign: `modules add owner/repo` works with no index at all, and the
+    catalog is non-exhaustive (community connectors may exist that aren't
+    listed). Matches `query` against name/broker/provenance/asset-class/cap."""
+    idx = Path(root) / "connectors-index.json"
+    if not idx.is_file():
+        print("  no connector index shipped — discovery is optional; you can "
+              "still `sciqnt modules add owner/repo` directly")
+        return 0
+    try:
+        conns = json.loads(idx.read_text()).get("connectors", [])
+    except (ValueError, OSError):
+        print("  connector index is unreadable")
+        return 1
+    q = (query or "").lower().strip()
+
+    def _match(e):
+        hay = " ".join([
+            e.get("name", ""), e.get("broker", ""), e.get("provenance", ""),
+            e.get("zone", ""), " ".join(e.get("asset_classes") or []),
+            " ".join(e.get("capabilities") or []),
+        ]).lower()
+        return q in hay
+
+    hits = [e for e in conns if _match(e)] if q else conns
+    if not hits:
+        print(f"  no indexed connectors match {query!r} ({len(conns)} indexed; "
+              "the catalog is non-exhaustive — others may exist unindexed)")
+        return 0
+    label = f" for {query!r}" if q else ""
+    print(f"  {len(hits)} connector(s){label}:")
+    for e in hits:
+        ac = ",".join(e.get("asset_classes") or []) or "-"
+        tier = f"{e.get('zone', '')}/{e.get('provenance', 'n/a')}"
+        print(f"    {BOLD}{e['name']}{RST}  "
+              f"{DIM}{tier} · {ac} · {e.get('repo', '')}{RST}")
+    print(f"  {DIM}install: sciqnt modules add <owner/repo>{RST}")
+    return 0
+
+
 def cli(root, argv: list[str]) -> int:
     if not argv:
-        print("usage: sciqnt modules add owner/repo | remove <name> | list")
+        print("usage: sciqnt modules add owner/repo | remove <name> | "
+              "list | find <query>")
         return 2
     sub, rest = argv[0], argv[1:]
     root = Path(root)
+    if sub == "find":
+        return find(rest[0] if rest else "", root)
     if sub == "add":
         if not rest:
             print("usage: sciqnt modules add owner/repo[@ref]")
@@ -177,5 +223,5 @@ def cli(root, argv: list[str]) -> int:
         return remove(rest[0], root)
     if sub == "list":
         return list_installed(root)
-    print(f"unknown: modules {sub} (add | remove | list)")
+    print(f"unknown: modules {sub} (add | remove | list | find)")
     return 2

@@ -1,0 +1,241 @@
+{
+  "schema": "sciqnt.connector-index/v1",
+  "note": "OPTIONAL discovery catalog \u2014 humans via `sciqnt modules find`, agents via llms.txt. The registry is OPTIONAL (sovereignty): `sciqnt modules add owner/repo` works WITHOUT this file. Community (Zone 2) connectors live in their authors' own repos and are added here by PR \u2014 see research/connector-publishing.md. First-party entries are generated from each bundle's manifest.yaml (scripts/build_connector_index.py).",
+  "connectors": [
+    {
+      "name": "sq-config",
+      "broker": "",
+      "kind": "infra",
+      "repo": "sciqnt/sciqnt",
+      "zone": "official",
+      "endorsed": true,
+      "risk_tier": "read",
+      "provenance": "n/a",
+      "asset_classes": [],
+      "status": "proof",
+      "capabilities": [
+        "get_setting"
+      ]
+    },
+    {
+      "name": "sq-degiro",
+      "broker": "Degiro (flatexDEGIRO)",
+      "kind": "source",
+      "repo": "sciqnt/sciqnt",
+      "zone": "official",
+      "endorsed": true,
+      "risk_tier": "read",
+      "provenance": "reverse-engineered",
+      "asset_classes": [],
+      "status": "proof",
+      "capabilities": [
+        "read_transactions",
+        "read_positions",
+        "realized_pnl",
+        "reconcile_cash",
+        "live_positions",
+        "live_cash",
+        "sync_history"
+      ]
+    },
+    {
+      "name": "sq-demo",
+      "broker": "demo",
+      "kind": "demo",
+      "repo": "sciqnt/sciqnt",
+      "zone": "official",
+      "endorsed": true,
+      "risk_tier": "none",
+      "provenance": "n/a",
+      "asset_classes": [
+        "ETF",
+        "STOCK"
+      ],
+      "status": "v1",
+      "capabilities": [
+        "live_positions",
+        "transaction_history"
+      ]
+    },
+    {
+      "name": "sq-edgar",
+      "broker": "",
+      "kind": "source",
+      "repo": "sciqnt/sciqnt",
+      "zone": "official",
+      "endorsed": true,
+      "risk_tier": "read",
+      "provenance": "official",
+      "asset_classes": [],
+      "status": "proof",
+      "capabilities": [
+        "resolve_cik",
+        "recent_filings",
+        "fundamentals_lite"
+      ]
+    },
+    {
+      "name": "sq-finnhub",
+      "broker": "",
+      "kind": "source",
+      "repo": "sciqnt/sciqnt",
+      "zone": "official",
+      "endorsed": true,
+      "risk_tier": "read",
+      "provenance": "official",
+      "asset_classes": [],
+      "status": "proof",
+      "capabilities": [
+        "get_news"
+      ]
+    },
+    {
+      "name": "sq-firds",
+      "broker": "",
+      "kind": "source",
+      "repo": "sciqnt/sciqnt",
+      "zone": "official",
+      "endorsed": true,
+      "risk_tier": "read",
+      "provenance": "official",
+      "asset_classes": [],
+      "status": "proof",
+      "capabilities": [
+        "resolve_metadata"
+      ]
+    },
+    {
+      "name": "sq-fx-ecb",
+      "broker": "European Central Bank (public reference rates)",
+      "kind": "source",
+      "repo": "sciqnt/sciqnt",
+      "zone": "official",
+      "endorsed": true,
+      "risk_tier": "read",
+      "provenance": "n/a",
+      "asset_classes": [],
+      "status": "proof",
+      "capabilities": [
+        "get_fx_rate"
+      ]
+    },
+    {
+      "name": "sq-kalshi",
+      "broker": "Kalshi",
+      "kind": "source",
+      "repo": "sciqnt/sciqnt",
+      "zone": "official",
+      "endorsed": true,
+      "risk_tier": "read",
+      "provenance": "official",
+      "asset_classes": [
+        "EVENT"
+      ],
+      "status": "proof",
+      "capabilities": [
+        "live_positions",
+        "live_cash",
+        "mark_to_market"
+      ]
+    },
+    {
+      "name": "sq-news-rss",
+      "broker": "",
+      "kind": "source",
+      "repo": "sciqnt/sciqnt",
+      "zone": "official",
+      "endorsed": true,
+      "risk_tier": "read",
+      "provenance": "n/a",
+      "asset_classes": [],
+      "status": "proof",
+      "capabilities": [
+        "get_news"
+      ]
+    },
+    {
+      "name": "sq-openfigi",
+      "broker": "",
+      "kind": "source",
+      "repo": "sciqnt/sciqnt",
+      "zone": "official",
+      "endorsed": true,
+      "risk_tier": "read",
+      "provenance": "official",
+      "asset_classes": [],
+      "status": "proof",
+      "capabilities": [
+        "resolve_isin",
+        "yahoo_candidates"
+      ]
+    },
+    {
+      "name": "sq-polymarket",
+      "broker": "Polymarket",
+      "kind": "source",
+      "repo": "sciqnt/sciqnt",
+      "zone": "official",
+      "endorsed": true,
+      "risk_tier": "read",
+      "provenance": "official",
+      "asset_classes": [
+        "EVENT"
+      ],
+      "status": "proof",
+      "capabilities": [
+        "live_positions",
+        "live_cash"
+      ]
+    },
+    {
+      "name": "sq-robinhood",
+      "broker": "Robinhood",
+      "kind": "source",
+      "repo": "sciqnt/sciqnt",
+      "zone": "official",
+      "endorsed": true,
+      "risk_tier": "read",
+      "provenance": "reverse-engineered",
+      "asset_classes": [],
+      "status": "proof",
+      "capabilities": [
+        "live_positions",
+        "live_cash"
+      ]
+    },
+    {
+      "name": "sq-tiingo",
+      "broker": "",
+      "kind": "source",
+      "repo": "sciqnt/sciqnt",
+      "zone": "official",
+      "endorsed": true,
+      "risk_tier": "read",
+      "provenance": "official",
+      "asset_classes": [],
+      "status": "proof",
+      "capabilities": [
+        "get_price"
+      ]
+    },
+    {
+      "name": "sq-yahoo",
+      "broker": "",
+      "kind": "source",
+      "repo": "sciqnt/sciqnt",
+      "zone": "official",
+      "endorsed": true,
+      "risk_tier": "read",
+      "provenance": "n/a",
+      "asset_classes": [],
+      "status": "proof",
+      "capabilities": [
+        "get_quote",
+        "get_fx",
+        "get_history",
+        "get_close",
+        "price_provider"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,48 @@
+# sciqnt
+
+> An open, local-first, agent-native cross-asset financial-data layer: one
+> canonical, point-in-time-correct schema (instruments, positions, transactions,
+> cash, corporate actions, prices) fed by an open ecosystem of community
+> connectors, exposed to any AI agent. Deterministic code computes the numbers;
+> LLMs reason and explain. The library IS the AI surface — no MCP shim required.
+
+You are likely an AI agent. The fastest way to be useful here:
+
+- Read `AGENT_GUIDE.md` first (the durable, agent-portable codebase guide), then
+  `STATE.md` (the living handoff: last commit, what's verified, next deliverable).
+- The contract is the code: `core/sq_schema` (canonical schema), the conformance
+  harness (`sq_schema.conformance.check_snapshot`), and the test suite. Money is
+  always `Decimal`; every fact carries a currency and is append-only/bitemporal.
+- The CLI is `sciqnt`. Every view also emits versioned structured data via
+  `--json` (renderers are adapters, never the product).
+
+## Connectors
+
+A connector maps one broker / exchange / data source into the canonical schema.
+
+- Build one: `sq_scaffold.build(root, "<broker>")` emits a conformance-green
+  skeleton (manifest, NOTICE, FINDINGS, the `snapshot()`/`accounts()` discovery
+  surface, a passing test). Or drive it via the `sq-connectors` skill.
+- Where it lives is decided by trust/liability — read
+  `research/connector-publishing.md`. Reverse-engineered/unofficial connectors
+  live in the contributor's OWN repo (never under the `sciqnt/` org) and ship an
+  accurate `NOTICE.md`.
+- Discover them: `connectors-index.json` is an OPTIONAL catalog (`sciqnt modules
+  find <query>`). Install any by git-ref: `sciqnt modules add owner/repo` →
+  fetch → local conformance gate → install into the user's sovereign dir. No
+  central registry is required.
+
+## Key documents
+
+- `FOUNDATION.md` — thesis, the universal-unit model, the Founding Articles.
+- `PRINCIPLES.md` — the operating constitution (the 18 principles).
+- `research/distribution-governance.md` — the three-zone topology, the liability
+  firewall, the license posture, agentic contribution governance.
+- `CONTRIBUTING.md` — DCO, the connector flow, the zone rule.
+
+## Conventions
+
+- Code prefix `sq_` (packages) / `sq-` (connector bundles); CLI `sciqnt`; config
+  at `~/.config/sciqnt/`. Connectors are named `sq-<broker>`.
+- Sovereignty: the user owns the data and keys ("fire us and keep everything").
+  Nothing requires a central server.
