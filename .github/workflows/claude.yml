@@ -50,14 +50,11 @@ jobs:
           # token exchange, which 401s here). `permissions:` above scopes it.
           github_token: ${{ github.token }}
           trigger_phrase: "@claude"
-          prompt: |
-            You are working in sciqnt (github.com/sciqnt/sciqnt). Before any
-            change, read PRINCIPLES.md, .github/PRINCIPLE_REVIEW.md, and
-            AGENT_GUIDE.md — the constitution governs every edit. Any code you
-            touch must keep `./run_tests.sh` green (tests + conformance + the
-            personal-data scrub); run it before you push. Money stays `Decimal`,
-            facts stay bitemporal, no credential custody, synthetic fixtures
-            only. State honest gaps (P18) in your summary.
+          # NO static `prompt:` here — in mention mode the triggering @claude
+          # comment IS the task. (A `prompt:` would override it and run a generic
+          # instruction instead.) Guardrails live in the system prompt below +
+          # the repo CLAUDE.md (auto-read), so they apply to whatever's asked.
           claude_args: |
             --model claude-opus-4-8
             --max-turns 40
+            --append-system-prompt "The sciqnt constitution governs every edit (PRINCIPLES.md, .github/PRINCIPLE_REVIEW.md, AGENT_GUIDE.md). Any code you touch must keep ./run_tests.sh green (tests + conformance + personal-data scrub) — run it before you push. Money stays Decimal, facts stay bitemporal, no credential custody, synthetic fixtures only. State honest gaps (P18) in your summary."
