@@ -70,7 +70,10 @@ A connector PR needs all five:
 
 Independent connector repos are equally welcome — `sciqnt modules add
 owner/repo` installs by git ref and runs conformance locally. Passing
-the suite in our scheduled CI earns the **certified** tier.
+the suite in our scheduled CI earns the **certified** tier. To discover
+existing connectors, `sciqnt modules find <query>` searches the optional
+catalog (`connectors-index.json`) — though `modules add owner/repo` works
+with no catalog at all (discovery is optional, sovereignty first).
 
 ### Where your connector lives (the zones — read `research/connector-publishing.md`)
 
