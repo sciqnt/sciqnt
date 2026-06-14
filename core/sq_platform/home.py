@@ -665,10 +665,12 @@ def _agent_rows(context, warnings=None, recommend=None):
     installed = sq_agents.recent_installed()     # MRU order: last-used first
     labels = [sq_agents.label(n) for n in installed]
     options = labels + ["More"]
+    # A small accent diamond before the agent label, in the highlight colour.
+    diamond = "\033[38;5;152m◆\033[0m "
     if installed:
-        agent_label = f"SciQnt Agent + {labels[0]}"   # the most recent leads
+        agent_label = f"{diamond}SciQnt Agent + {labels[0]}"   # the most recent leads
     else:
-        agent_label = "SciQnt Agent + (no agent installed — More)"
+        agent_label = f"{diamond}SciQnt Agent + (no agent installed — More)"
     toggle = {"index": 0, "prefix": "SciQnt Agent + ", "options": options,
               "selected": 0}
     rows = [(agent_label, "agent")]
