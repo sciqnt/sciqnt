@@ -31,8 +31,13 @@ self-check — the "honest gaps" habit (P18).
 
 ## Ground rules
 
-- **DCO, not CLA.** Sign your commits off (`git commit -s`,
-  `Signed-off-by: Name <email>`). You certify you may contribute the code.
+- **DCO, not CLA — permanently.** Sign your commits off (`git commit -s`,
+  `Signed-off-by: Name <email>`). You certify you may contribute the code; you
+  keep your copyright. sciqnt will **never** ask for a CLA or copyright
+  assignment — that's the structural thing that lets a vendor relicense (rug-pull)
+  a project out from under its community, and DCO-only makes that *impossible*
+  here. The code is **MIT and stays MIT** (`research/distribution-governance.md`
+  §5).
 - **The harness is the reviewer.** `./run_tests.sh` must be green — it runs
   every package's tests, the conformance suite, and the personal-data gate.
 - **Synthetic fixtures only.** Never real account data, credentials, or

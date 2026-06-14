@@ -1,12 +1,11 @@
 # Distribution & governance framework
 
-> **Status: decided (2026-06-14), one section pending verification.** This is the
-> load-bearing decision for how sciqnt's connector ecosystem is hosted, governed,
-> contributed to, monetized, and discovered. Grounded in a deep-research pass
-> (23/25 claims adversarially verified, 3-vote). The open/proprietary license
-> section (§5) is synthesised from public history and is being verified by a
-> focused second research pass — treat its specifics as provisional until that
-> lands. Everything else is decided; don't relitigate without cause.
+> **Status: decided (2026-06-14).** This is the load-bearing decision for how
+> sciqnt's connector ecosystem is hosted, governed, contributed to, monetized,
+> and discovered. Grounded in two deep-research passes (topology/liability/
+> governance: 23/25 claims 3-vote-verified; the §5 license posture: a second
+> focused pass, 22/25 verified). All sections are decided; don't relitigate
+> without cause.
 
 ## TL;DR — the three-zone model
 
@@ -136,26 +135,63 @@ provenance ([Terraform publishing](https://developer.hashicorp.com/terraform/reg
 Trust tiers map to the existing risk tiers: **official-api > csv/file >
 reverse-engineered/browser**, earned through conformance, not through a human bottleneck.
 
-## 5. Open / proprietary boundary + license posture — *provisional, verifying*
+## 5. Open / proprietary boundary + license posture — **DECIDED**
 
-> The deep-research pass ran out of budget here; a focused second pass is verifying the
-> relicensing cautionary tales. The posture below is from well-established public history
-> and is high-confidence in direction; treat exact mechanics as provisional.
+> Deep-research-grounded (pass `wf_4c6cb922-4eb`, 22/25 claims 3-vote-verified).
+> The repo already implements this posture (MIT across the root LICENSE + all 31
+> packages; DCO, not CLA) — this section records *why* it is the right call and
+> makes "never relicense" + "DCO-only" load-bearing commitments, not defaults.
 
-- **Open (permissive, MIT, forever):** the contract/schema, compute, conformance harness,
-  TUI, website, and most connectors. **The contract MUST stay MIT** so proprietary *and*
-  community connectors can build on it (a copyleft contract would break both the
-  closed-connector business model and community contribution).
-- **Potentially proprietary:** sciqnt's **self-originated data** + the backend that turns
-  it into sciqnt's own APIs/connectors; specific **private connectors**; a hosted
-  convenience layer. The moat is **self-originated data + unified correctness + connector
-  reach**, never reselling licensed feeds.
-- **Never commercialized:** third-party broker connectors sciqnt doesn't own.
-- **The load-bearing rule (the anti-fork lesson):** **never relicense what was once
-  open.** Every major fork — OpenTofu (Terraform→BSL), Valkey (Redis→SSPL), OpenSearch
-  (Elasticsearch→SSPL) — was triggered by *closing previously-open code*. Build the
-  proprietary layer as **separate products additive on top** of a permanently-open core
-  (the dbt Core / GitLab CE / Airbyte OSS pattern), **never** by clawing the core back.
+### The recommendation (one posture, not a menu)
+
+| Layer | License | Why |
+|---|---|---|
+| **Contract / schema / SDK** (`sq_schema`, `sq_fmt`, the conformance harness, the connector contract) | **MIT — permanently** | Must stay permissive so *every* connector — community, **and proprietary/private** — can build on it without copyleft infection. This is the Grafana lesson: it relicensed its *core* but **kept plugins/agents/SDK Apache** so the ecosystem stays buildable. |
+| **Engine / core** (compute, analytics, platform, TUI) | **MIT — permanently** | sciqnt is **local-first** with a **data + ops moat**, not a hosted service a hyperscaler can strip-mine — so AGPL's network-copyleft protection is *low-value here* (its trigger barely fires for a local CLI/library) and *high-friction* (enterprise legal teams ban AGPL; it deters embedding in agent hosts). When the moat is self-originated data + connector reach + brand — not the code — permissive maximizes adoption with no moat cost (the PostHog/Supabase "open code, monetize the data/hosted layer" model). |
+| **First-party connectors** | **MIT** | Consistent with the repo; reference implementations. |
+| **Community connectors** | **author's choice** | They own their repos (Zone 2). Because the contract is MIT, they *may* be proprietary, MIT, or anything. |
+| **Proprietary layer** (self-originated data + its backend; specific private connectors; a hosted convenience/sync layer) | **closed, ADDITIVE on top** | Monetize via value-added products on a permanently-open core (dbt Cloud / dbt's Fusion binary; Grafana Cloud + Enterprise) — **never** by relicensing the core. Moat = self-originated data + unified correctness + connector reach + brand, **never reselling licensed feeds**. |
+| **Third-party broker connectors sciqnt doesn't own** | **never commercialized** | (The liability firewall, §2.) |
+
+### Governance: **DCO-only, never a CLA** — the load-bearing rug-pull-proofing
+
+Every relicensing rug-pull was **structurally enabled by a CLA with copyright
+assignment + single-vendor governance** ([arXiv 2411.04739](https://arxiv.org/pdf/2411.04739)).
+A **DCO** lacks that power imbalance, so a DCO-only project is *"less likely to be
+rug-pulled"* ([LWN](https://lwn.net/SubscriberLink/1036465/e80ebbc4cee39bfb/)) —
+and the commitment is itself the strongest **trust signal**, because it makes the
+rug-pull *structurally impossible* (you cannot relicense contributors' code without
+their permission). sciqnt already uses DCO; this makes it a deliberate, permanent
+anti-rug-pull guarantee, not an incidental choice. **Adopting a CLA later would
+itself be the betrayal** — don't.
+
+### Why permissive-and-permanent beats relicensing (the evidence)
+
+- **The fork trigger is *relicensing previously-open code*** from permissive/weak-copyleft
+  (Apache/MPL/BSD) to restrictive source-available (SSPL/BSL/RSALv2) — OpenTofu←Terraform-BSL,
+  Valkey←Redis-SSPL, OpenSearch←Elasticsearch-SSPL ([opentofu.org](https://opentofu.org/blog/opentofu-announces-fork-of-terraform/),
+  [chaoss](https://chaoss.community/what-happens-to-relicensed-open-source-projects-and-their-forks/)).
+  After Redis relicensed, **essentially all external company contributors stopped** and moved to the fork.
+- **Relicensing didn't even pay off:** RedMonk found *no evidence* it improved vendors' financials,
+  and **Elastic backtracked**, re-adding AGPL in Aug 2024 *"to call Elasticsearch open source again"*
+  ([elastic.co](https://www.elastic.co/blog/elasticsearch-is-open-source-again)).
+- **The survivors monetize additively on a permanently-open core:** dbt Core stays Apache-2.0 while
+  dbt Labs sells a proprietary binary + premium features on top ([getdbt](https://www.getdbt.com/blog/licensing-dbt));
+  Grafana keeps AGPL core + Apache SDK and monetizes Cloud/Enterprise, *"not on restrictive licensing of the core"*
+  ([grafana](https://grafana.com/blog/2021/04/20/qa-with-our-ceo-on-relicensing/)).
+
+### The load-bearing rules
+
+1. **Never relicense what was once open.** Build proprietary as *separate additive products*.
+2. **DCO-only, forever.** No CLA, no copyright assignment.
+3. **Contract/SDK stays MIT** so all connectors (incl. proprietary) build on it.
+4. **Don't cripple the open core to sell the proprietary layer** — the line is *data + ops + hosted*, never removing local capability (avoids "open-core resentment").
+
+### Top failure modes + mitigations
+
+- **A hyperscaler offers "sciqnt cloud" (strip-mining).** Low risk for a local-first, data-moat tool. Mitigation: the moat is self-originated data + ops + the connector network + **trademark** (protect the *sciqnt* name — code is free, the name is not; the Grafana approach), not the code. AGPL-the-engine is a last-resort lever *only if* strip-mining becomes a *measured* threat — but it doesn't fit local-first, so don't pre-optimize.
+- **Open-core resentment** (premium features seen as cannibalizing the open core). Mitigation: the open core must stay genuinely complete standalone (it is — full local portfolio analytics); proprietary is strictly *additive* (hosted convenience, self-originated data), never subtractive.
+- **Investor pressure to relicense** (what hit Redis/HashiCorp). Mitigation: DCO-only makes it structurally hard; the evidence shows relicensing doesn't even help financials; optionally a public no-relicense pledge / eventual neutral-foundation path.
 
 ## 6. Telemetry & discoverability — registry-optional, sovereign
 
@@ -175,7 +211,6 @@ local-first + sovereign":
 ## Open questions (carried)
 
 - Exact telemetry mix that yields per-connector signal without violating sovereignty.
-- The precise open-core line + license mechanics (§5) — **focused research pass in flight**.
 - Human-in-the-loop ratio for money-adjacent merges (full-auto vs maintainer-required).
 - Preventing conformance-gaming (connectors that pass the suite while subtly wrong) and
   scaffold-funnel sprawl.
