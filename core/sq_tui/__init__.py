@@ -862,6 +862,11 @@ table's column header). Returns the chosen payload, or a sentinel:
         row = "class:sel" if hovered else "class:item"
         sep = t.get("separator", "  |  ")
         out = [(row, f" {ptr} ")]
+        if t.get("badge"):
+            # An accent badge before the prefix (e.g. the agent "◆"), painted
+            # via class:sel so it tracks the theme highlight and is dropped
+            # under NO_COLOR — never a baked ANSI escape.
+            out.append(("class:sel", t["badge"]))
         if t.get("prefix"):
             out.append((row, t["prefix"]))          # prefix accents on hover
         for k, opt in enumerate(t["options"]):

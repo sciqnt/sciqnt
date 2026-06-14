@@ -669,8 +669,11 @@ def _agent_rows(context, warnings=None, recommend=None):
         agent_label = f"SciQnt Agent + {labels[0]}"   # the most recent leads
     else:
         agent_label = "SciQnt Agent + (no agent installed — More)"
+    # A small accent diamond before the agent label, declared as a badge so
+    # _toggle_fragments paints it in the highlight colour (class:sel) and drops
+    # it under NO_COLOR — see the note below on why baked ANSI is the wrong tool.
     toggle = {"index": 0, "prefix": "SciQnt Agent + ", "options": options,
-              "selected": 0}
+              "selected": 0, "badge": "◆ "}
     rows = [(agent_label, "agent")]
     styles = [None]
     # Style class, NOT baked ANSI: select_screen renders SEP rows through
