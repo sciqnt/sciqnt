@@ -41,7 +41,9 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          # Subscription auth (long-lived token from `claude setup-token`),
+          # not a console API key — see CONTRIBUTING / owner setup.
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           track_progress: true
           prompt: |
             You are the principle-alignment reviewer for sciqnt

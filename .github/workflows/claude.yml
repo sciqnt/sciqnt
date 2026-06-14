@@ -44,7 +44,8 @@ jobs:
 
       - uses: anthropics/claude-code-action@v1
         with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          # Subscription auth (long-lived token from `claude setup-token`).
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           trigger_phrase: "@claude"
           prompt: |
             You are working in sciqnt (github.com/sciqnt/sciqnt). Before any
