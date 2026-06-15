@@ -32,10 +32,10 @@ permissions:
 
 jobs:
   review:
-    # Skip drafts and bot-authored PRs.
-    if: >-
-      github.event.pull_request.draft == false &&
-      github.event.pull_request.user.type != 'Bot'
+    # Review non-draft PRs, including those opened by sciqnt-bot (the issue-triage
+    # agent's proposals — we WANT those reviewed). Other bots are skipped. (One
+    # line — a folded multi-line `if` with extra indentation breaks the expr.)
+    if: ${{ github.event.pull_request.draft == false && (github.event.pull_request.user.type != 'Bot' || github.event.pull_request.user.login == 'sciqnt-bot[bot]') }}
     runs-on: ubuntu-latest
     steps:
       # Base branch only (trusted): gives the agent PRINCIPLES.md, FOUNDATION.md,
@@ -125,6 +125,12 @@ jobs:
           REPO: ${{ github.repository }}
           AUTHOR: ${{ github.event.pull_request.user.login }}
         run: |
+          # Never auto-merge a BOT-authored PR — that's the issue-triage agent's
+          # proposal (sciqnt-bot[bot]), which must always get a human. (The
+          # permission check below would also reject it, but be explicit.)
+          case "$AUTHOR" in
+            *'[bot]') echo "$AUTHOR is a bot (agent proposal) — never auto-merge"; exit 0 ;;
+          esac
           perm="$(gh api "repos/$REPO/collaborators/$AUTHOR/permission" -q '.permission' 2>/dev/null || echo none)"
           case "$perm" in
             admin|write|maintain) : ;;
