@@ -53,6 +53,9 @@ jobs:
           # review) instead of the OIDC→Claude-App token exchange, which 401s
           # here. `permissions:` above scopes it (pull-requests: write).
           github_token: ${{ github.token }}
+          # The action refuses bot-triggered runs by default; allow OUR triage
+          # bot so its proposal PRs still get reviewed (not '*' — only sciqnt-bot).
+          allowed_bots: "sciqnt-bot[bot]"
           track_progress: true
           prompt: |
             You are the principle-alignment reviewer for sciqnt
