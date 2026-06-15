@@ -1,11 +1,12 @@
 # Distribution & governance framework
 
-> **Status: decided (2026-06-14).** This is the load-bearing decision for how
-> sciqnt's connector ecosystem is hosted, governed, contributed to, monetized,
-> and discovered. Grounded in two deep-research passes (topology/liability/
-> governance: 23/25 claims 3-vote-verified; the §5 license posture: a second
-> focused pass, 22/25 verified). All sections are decided; don't relitigate
-> without cause.
+> **Status: decided (2026-06-14), PARTIALLY SUPERSEDED (2026-06-15).** Grounded in
+> two deep-research passes. **The liability-firewall call in §2 is REVISED by
+> `research/component-world-blueprint.md`:** the owner decided everything is **open
+> source under the `sciqnt` org**, connectors included (the ccxt model) — the repo
+> boundary now sorts by **visibility** (public vs private), not liability. Read the
+> blueprint for the current topology decision. The license posture (§5: MIT + DCO,
+> never relicense) and the agentic-governance/conformance design still hold.
 
 ## TL;DR — the three-zone model
 
