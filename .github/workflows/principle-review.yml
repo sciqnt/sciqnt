@@ -106,22 +106,30 @@ jobs:
       # authors (you + collaborators) aren't attacking their own PRs, so auto-merge
       # is safe there. CI (tests + conformance + scrub) remains the real gate for
       # everyone. Revert by deleting this step.
-      - name: Auto-merge when the review is aligned
-        # Trusted authors only — community/fork PRs always require a human merge.
-        # NOTE: keep this on ONE line. A folded (>-) block with an extra-indented
-        # continuation is treated as literal by YAML, injecting a newline that
-        # silently breaks the expression (the gate then always skips).
-        if: always() && contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.pull_request.author_association)
+      #
+      # Trust is decided by actual REPO PERMISSION (admin/write/maintain), read
+      # from the API in-step — NOT `github.event.pull_request.author_association`,
+      # which only reflects PUBLIC org membership and so under-reports for private
+      # members (it silently skipped even for the repo admin). Both gates (author
+      # + verdict) live in bash so the logic is explicit and testable.
+      - name: Auto-merge when the review is aligned (trusted authors only)
+        if: always()
         env:
           GH_TOKEN: ${{ github.token }}
           PR: ${{ github.event.pull_request.number }}
           REPO: ${{ github.repository }}
+          AUTHOR: ${{ github.event.pull_request.user.login }}
         run: |
+          perm="$(gh api "repos/$REPO/collaborators/$AUTHOR/permission" -q '.permission' 2>/dev/null || echo none)"
+          case "$perm" in
+            admin|write|maintain) : ;;
+            *) echo "author $AUTHOR has perm=$perm (untrusted) — community PR, leaving for a human"; exit 0 ;;
+          esac
           body="$(gh pr view "$PR" --repo "$REPO" --json comments \
                   -q '[.comments[] | select(.author.login=="github-actions")] | last | .body' 2>/dev/null || true)"
           if printf '%s' "$body" | grep -q 'VERDICT: ALIGNED'; then
             gh pr merge "$PR" --repo "$REPO" --auto --squash --delete-branch \
-              && echo "✅ verdict ALIGNED — auto-merge enabled (merges once required checks pass)"
+              && echo "✅ trusted author ($perm) + ALIGNED — auto-merge enabled (merges once required checks pass)"
           else
             echo "verdict not ALIGNED (or no review) — left for a maintainer; auto-merge NOT enabled"
           fi
