@@ -50,6 +50,13 @@ jobs:
         with:
           app-id: ${{ secrets.APP_ID }}
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          # Least privilege. @claude is maintainer-triggered (trusted) and may be
+          # asked to fix a workflow via PR (still human-gated), so workflows:write
+          # is allowed here — unlike the untrusted-input issue-triage token.
+          permission-contents: write
+          permission-pull-requests: write
+          permission-issues: write
+          permission-workflows: write
 
       - uses: anthropics/claude-code-action@v1
         with:
