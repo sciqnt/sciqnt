@@ -108,10 +108,10 @@ jobs:
       # everyone. Revert by deleting this step.
       - name: Auto-merge when the review is aligned
         # Trusted authors only — community/fork PRs always require a human merge.
-        if: >-
-          always() &&
-          contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'),
-                   github.event.pull_request.author_association)
+        # NOTE: keep this on ONE line. A folded (>-) block with an extra-indented
+        # continuation is treated as literal by YAML, injecting a newline that
+        # silently breaks the expression (the gate then always skips).
+        if: always() && contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.pull_request.author_association)
         env:
           GH_TOKEN: ${{ github.token }}
           PR: ${{ github.event.pull_request.number }}
