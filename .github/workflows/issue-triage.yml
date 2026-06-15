@@ -25,7 +25,12 @@
 #   * RUNTIME: `--allowedTools` below caps the agent to the tools triage actually
 #     needs (Read/Edit/Write/git + the gh issue/pr commands) — NO bare Bash — so a
 #     prompt-injected issue can't coax arbitrary shell / token misuse. Caps are
-#     code here, not prose (P16).
+#     code here, not prose (P16). `git push` IS allowed (the agent must push its
+#     own feature branch to open the proposal PR) and the glob is broad enough to
+#     match `--force` — an ACCEPTED RESIDUAL: it cannot reach `main` (branch
+#     protection; bot not a bypass actor), and its PRs are human-gated, so the
+#     worst a surviving injection does is clobber a throwaway feature branch
+#     (which CI + a human still gate). Per-issue concurrency further serializes runs.
 #   * Issue text is treated as untrusted data; closing is reversible.
 # Revert by deleting this file. NOTE: a PR the agent opens via GITHUB_TOKEN does
 # NOT auto-trigger CI (GitHub loop-prevention) — a maintainer re-triggers it
