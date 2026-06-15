@@ -42,13 +42,29 @@ jobs:
         with:
           fetch-depth: 0
 
+      # Mint a token from the sciqnt-bot GitHub App so the agent's commits/PRs
+      # come from a non-GITHUB_TOKEN actor and therefore TRIGGER CI + review
+      # (git ops authored by the default GITHUB_TOKEN are loop-suppressed).
+      - uses: actions/create-github-app-token@v1
+        id: app-token
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          # Least privilege. @claude is maintainer-triggered (trusted) and may be
+          # asked to fix a workflow via PR (still human-gated), so workflows:write
+          # is allowed here — unlike the untrusted-input issue-triage token.
+          permission-contents: write
+          permission-pull-requests: write
+          permission-issues: write
+          permission-workflows: write
+
       - uses: anthropics/claude-code-action@v1
         with:
           # Subscription auth (long-lived token from `claude setup-token`).
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          # Use the workflow GITHUB_TOKEN directly (skip the OIDC→Claude-App
-          # token exchange, which 401s here). `permissions:` above scopes it.
-          github_token: ${{ github.token }}
+          # sciqnt-bot App token (minted above) so a @claude fix PUSH triggers
+          # CI + the synchronize re-review.
+          github_token: ${{ steps.app-token.outputs.token }}
           trigger_phrase: "@claude"
           # NO static `prompt:` here — in mention mode the triggering @claude
           # comment IS the task. (A `prompt:` would override it and run a generic

@@ -15,10 +15,13 @@
 # Scope: all three arms (close / needs-info / open-a-PR) are enabled — a
 # deliberate owner decision (the open-a-PR-from-an-issue arm is the powerful one).
 # Containment, in layers:
-#   * MERGE: a triage-opened PR is bot-authored → Option A (principle-review.yml)
-#     never enables auto-merge for it → CI + a human gate it. Code from an
-#     untrusted issue can NEVER merge without a person. (Hard dependency: branch
-#     protection on `main` must require PRs — it does; this file relies on it.)
+#   * MERGE: a triage-opened PR is bot-authored (sciqnt-bot[bot]) → Option A
+#     (principle-review.yml) never enables auto-merge for it → CI + a human gate
+#     it. Code from an untrusted issue can NEVER merge without a person. Hard
+#     dependency: branch protection on `main` requires PRs AND sciqnt-bot is NOT
+#     a bypass actor (verified 2026-06-15: no push restrictions, no ruleset
+#     bypass, app has contents:write but NOT admin — enforce_admins only exempts
+#     admin users). So the bot can't push to `main` directly either.
 #   * RUNTIME: `--allowedTools` below caps the agent to the tools triage actually
 #     needs (Read/Edit/Write/git + the gh issue/pr commands) — NO bare Bash — so a
 #     prompt-injected issue can't coax arbitrary shell / token misuse. Caps are
@@ -63,10 +66,26 @@ jobs:
         with:
           fetch-depth: 0
 
+      # sciqnt-bot App token so a triage-opened PR TRIGGERS CI + review (a PR
+      # opened by the default GITHUB_TOKEN is loop-suppressed). The PR is then
+      # authored by sciqnt-bot[bot] — a non-collaborator, so the auto-merge gate
+      # still never merges it: a human gates every agent proposal.
+      - uses: actions/create-github-app-token@v1
+        id: app-token
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          # Least privilege — scope the minted token to exactly what triage needs
+          # (NOT the app's full install perms). NO workflows:write — an untrusted
+          # issue must never be able to reach workflow files, even via a PR.
+          permission-contents: write
+          permission-pull-requests: write
+          permission-issues: write
+
       - uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          github_token: ${{ github.token }}
+          github_token: ${{ steps.app-token.outputs.token }}
           prompt: |
             You are the issue-triage agent for sciqnt (github.com/sciqnt/sciqnt).
             This is an ITERATIVE conversation, not a one-off: you run when an issue
