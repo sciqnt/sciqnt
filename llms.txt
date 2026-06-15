@@ -15,6 +15,9 @@ You are likely an AI agent. The fastest way to be useful here:
   always `Decimal`; every fact carries a currency and is append-only/bitemporal.
 - The CLI is `sciqnt`. Every view also emits versioned structured data via
   `--json` (renderers are adapters, never the product).
+- Maintenance is agent-native: new issues are auto-triaged + labeled by an agent
+  (re-engaging on each comment), PRs get an advisory principle-review, and a
+  maintainer can summon a fix with `@claude <instruction>`. See `CONTRIBUTING.md`.
 
 ## Connectors
 
