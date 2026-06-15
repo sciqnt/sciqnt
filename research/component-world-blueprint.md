@@ -293,6 +293,88 @@ divergence, independent cadence, ownership.
 - **The contract-first sequencing is the lowest-regret move** regardless of the softer
   points — do phase 0 first.
 
+## Appendix A — the repo manifest (canonical)
+
+**Naming convention.** Repos are `sq-<name>`; the `sciqnt` org supplies the
+namespace (so `sciqnt/sq-degiro`, no stutter). Role is carried by **GitHub topics**
+(`connector`, `provider`, `core`, `lib`, `app`, `governance`) + the manifest
+`kind`/`risk_tier`, NOT baked into the name — keeps names flat + flexible
+("discovery over enumeration"). Fixed exceptions: `.github` (GitHub-mandated),
+`.allstar` (if used). PyPI dist names stay `sciqnt-<name>` (a flat namespace needs
+the full prefix); the repo drops it (the org already says "sciqnt").
+
+**Split test (the granularity rule).** A *repo* is the unit of independent change /
+release / ownership / license / visibility — AND of **standalone value to others**.
+Split out what is *independently valuable AND coherent enough to stand alone, once
+that value is real or obvious, not speculative* (value-first). Group packages that
+change together; never fragment below a real boundary (the leftpad anti-pattern).
+The org is a **toolkit of independently-valuable open-source primitives** (the
+"OpenBB outcome"), not a decomposed app. `★★★` = general-purpose, `★★` = broadly
+reusable (finance/portfolio builders), `★` = sciqnt-specific.
+
+All repos **public + MIT + DCO** unless marked private.
+
+### Governance
+| Repo | Description | ★ |
+|---|---|---|
+| `.github` | Org default community-health files + default workflows | — |
+| `sq-constitution` | PRINCIPLES + FOUNDATION, the review rubric, reusable CI workflows, peribolos org-as-code | ★ |
+
+### Contract / SDK (the hub)
+| `sq-contract` | Canonical PIT schema + conformance harness + connector scaffold — the semver'd hub + connector SDK | ★★ |
+
+### Foundational libraries (the floor)
+| Repo | Description | ★ |
+|---|---|---|
+| `sq-math` | General math/formulas (stats + financial primitives); depends on nothing | ★★★ |
+| `sq-performance` | XIRR, TWR/GIPS, max-drawdown, return series — pure, no I/O | ★★★ |
+| `sq-compute` | Position from a transaction stream (fold; FIFO/LIFO/AVG) + cash aggregation — pure | ★★ |
+| `sq-fx` | FX conversion with point-in-time rates | ★★ |
+| `sq-price-store` | PIT price access — chained live providers + bitemporal archive fallback (absorbed the old `sq-marketdata` overlay) | ★★ |
+| `sq-secrets` | Cross-OS credential substrate — keychain + `.env` + persisted sessions | ★★ |
+| `sq-fmt` | Zero-dep terminal formatting — tables/kv, braille charts, ANSI tokens | ★★ |
+
+### Core substrate
+| Repo | Description | ★ |
+|---|---|---|
+| `sq-config` | sciqnt settings schema + materialization | ★ |
+| `sq-agents` | Detect + launch the user's installed coding agent with context — the lean "default-agent-launcher" (skills-less) | ★★ |
+
+### Standardization layer
+| `sq-portfolio` | Composes conformant broker-connector outputs into unified cross-broker portfolio state (aggregator + analytics + income + tax-lots); money-core orchestration | ★ |
+
+### Apps
+| Repo | Description | ★ |
+|---|---|---|
+| `sq-tui` | Interactive terminal app — home, portfolio views, connect/settings, charts; dispatcher (`sq_platform`) + sciqnt-skills install | ★ |
+| `sq-web` *(future)* | Web UI — **private** if it holds client accounts | ★ |
+
+### Connectors — one repo each (`sq-<source>`, all + `NOTICE`)
+| Repo | Description | ★ |
+|---|---|---|
+| `sq-degiro` | Degiro broker — CSV + live API (reverse-engineered) | ★★ |
+| `sq-robinhood` | Robinhood broker — live via robin_stocks (reverse-engineered) | ★★ |
+| `sq-kalshi` | Kalshi event market — official v2 API | ★★ |
+| `sq-polymarket` | Polymarket event market — public Data API + on-chain cash | ★★ |
+| `sq-yahoo` | Yahoo price/quote provider (unofficial) | ★★ |
+| `sq-fx-ecb` | ECB EUR-cross daily FX rates (public) | ★★ |
+| `sq-openfigi` | OpenFIGI ISIN → ticker/metadata | ★★ |
+| `sq-edgar` | SEC EDGAR filings + fundamentals | ★★ |
+| `sq-firds` | ESMA FIRDS instrument reference | ★★ |
+| `sq-finnhub` | Finnhub news/data (keyed) | ★ |
+| `sq-tiingo` | Tiingo price provider (keyed) | ★ |
+| `sq-news-rss` | Keyless RSS news | ★ |
+| `sq-demo` | Deterministic synthetic demo portfolio | ★ |
+
+### Private perimeter (as needed)
+| Repo | Description | Vis |
+|---|---|---|
+| `sq-data` | Self-originated data + the backend producing sciqnt's own APIs/feeds | private |
+| *(client-account services)* | Anything custodying client accounts/data | private |
+
+**Total: ~13 core/infra + 13 connectors ≈ 26 repos** (+ private as products appear).
+The `sciqnt/sciqnt` mono stays source-of-truth during the transition, then dissolves.
+
 ## Evidence base
 Deep-research pass `wf_e457961a-1b8` (2026-06-15): 5 angles, 24 sources, 113 claims,
 25 verified (24 confirmed 3-0, 1 refuted). Primary sources cited inline.
