@@ -18,7 +18,12 @@ name: principle-review
 
 on:
   pull_request_target:
-    types: [opened, reopened, ready_for_review]
+    # `synchronize` re-reviews on every new push — without it a PR reviewed
+    # ALIGNED on open could receive new commits that CI passes but the review
+    # never sees, and auto-merge would proceed on unreviewed code. Safe here:
+    # the job uses base-only checkout + read-only tools and never executes PR
+    # code (the usual pull_request_target risk). Cost: one review per push.
+    types: [opened, reopened, ready_for_review, synchronize]
 
 permissions:
   contents: write          # to ENABLE auto-merge when the verdict is aligned
@@ -131,5 +136,10 @@ jobs:
             gh pr merge "$PR" --repo "$REPO" --auto --squash --delete-branch \
               && echo "✅ trusted author ($perm) + ALIGNED — auto-merge enabled (merges once required checks pass)"
           else
-            echo "verdict not ALIGNED (or no review) — left for a maintainer; auto-merge NOT enabled"
+            # A re-review (e.g. on a `synchronize` push) that's no longer ALIGNED
+            # must REVOKE any auto-merge enabled by an earlier ALIGNED pass — else
+            # new unreviewed commits could still merge. Disabling when none is set
+            # is a harmless no-op.
+            gh pr merge "$PR" --repo "$REPO" --disable-auto 2>/dev/null || true
+            echo "verdict not ALIGNED (or no review) — auto-merge disabled; left for a maintainer"
           fi
