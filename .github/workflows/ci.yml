@@ -1,6 +1,7 @@
-# CI — the same bar a contributor runs locally: ./run_tests.sh
-# (all suites + conformance + the personal-data gate). Matrix mirrors
-# requires-python (>=3.10; tested floors 3.11).
+# CI for the repurposed sciqnt APP. The libraries + connectors graduated to their
+# own sciqnt/sq-* repos, so the app's deps resolve from there (git-ref @v0.1.0 during
+# the transition). CI installs the app — which pulls the whole component graph — then
+# runs the app's own test suite. Matrix mirrors requires-python (>=3.10).
 name: ci
 on:
   push: { branches: [main] }
@@ -18,7 +19,8 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: { python-version: "${{ matrix.python }}" }
-      # The suite's real third-party surface is tiny by design; live-SDK
-      # tests skip themselves when their extra isn't installed.
-      - run: pip install pydantic prompt-toolkit keyring
-      - run: PY=python ./run_tests.sh
+      # Installs sciqnt + every component lib from the sciqnt/sq-* repos (git-ref).
+      - name: Install the app (pulls the component libs)
+        run: pip install .
+      - name: App test suite
+        run: python -m unittest discover -s core/tests -p 'test_*.py'

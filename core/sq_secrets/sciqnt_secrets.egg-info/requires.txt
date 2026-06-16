@@ -1,3 +1,0 @@
-keyring
-sciqnt-config
-sciqnt-tui
