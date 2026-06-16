@@ -440,9 +440,27 @@ CONNECTORS = [
 # Reverse-engineered / unofficial brokers — the disclaimer matters most here.
 REVERSE_ENGINEERED = {"sq-degiro", "sq-robinhood", "sq-yahoo", "sq-polymarket"}
 
-# NEVER copy these into a public repo (credentials / local state).
-SECRET_NAMES = {".env", ".env.local"}
-SECRET_SUFFIXES = {".pem", ".key"}
+# NEVER copy these into a public repo (credentials / local state). The matcher
+# treats ANY .env* file as secret, plus these exact names and suffixes. The repo's
+# .gitignore is DERIVED from the same sets (below) so the two can't drift.
+SECRET_NAMES = {"credentials.json", "token.json", "secrets.json", ".netrc",
+                "service-account.json"}
+SECRET_SUFFIXES = {".pem", ".key", ".pfx", ".p12", ".p8"}
+
+
+def _is_secret(name: str) -> bool:
+    """A file that must never reach a public repo. `.env*` covers .env,
+    .env.local, .env.production, … in one rule."""
+    return (name.startswith(".env") or name in SECRET_NAMES
+            or Path(name).suffix in SECRET_SUFFIXES)
+
+
+def _secret_gitignore_lines() -> str:
+    """gitignore patterns derived from the secret sets — single source of truth."""
+    globs = ["# secrets — never commit", ".env*"]
+    globs += sorted(f"*{s}" for s in SECRET_SUFFIXES)
+    globs += sorted(SECRET_NAMES)
+    return "\n".join(globs) + "\n"
 
 
 def _repo_for_dist(dist: str):
@@ -474,9 +492,13 @@ def _rewrite_connector_pyproject(text: str, pin: str) -> str:
                 skip = False          # next section — stop skipping, fall through
             else:
                 continue
-        # A dependency list item is a bare quoted string with no '=' (which would
-        # mean name/readme/uv-source). Only those get rewritten.
-        if stripped.startswith('"sciqnt-') and "=" not in stripped and "@" not in stripped:
+        # A dependency list item starts with a quoted dist name (e.g.
+        # `"sciqnt-schema",` or `"sciqnt-schema>=0.1",`). The project's own `name =`
+        # and the uv.sources `"x" = {...}` lines are NOT list items: the former
+        # doesn't start with a quote, the latter is inside the already-skipped
+        # uv.sources section. So a leading `"sciqnt-` is sufficient — DON'T reject
+        # on a stray '=' (that broke versioned pins like `sciqnt-schema>=0.1`).
+        if stripped.startswith('"sciqnt-') and "@" not in stripped:
             indent = line[: len(line) - len(line.lstrip())]
             tail = "," if stripped.endswith(",") else ""
             token = stripped.rstrip(",").strip('"')          # e.g. sciqnt-schema or sciqnt-fmt>=1
@@ -529,12 +551,8 @@ def publish_connector(name: str, target_root: Path, constitution: Path,
 
     def _ignore(d, names):
         drop = {"__pycache__", ".git", ".venv", "build", "dist", ".verify-venv"}
-        out = set()
-        for n in names:
-            if n in drop or n in SECRET_NAMES or Path(n).suffix in SECRET_SUFFIXES \
-               or n.endswith(".egg-info"):
-                out.add(n)
-        return out
+        return {n for n in names
+                if n in drop or n.endswith(".egg-info") or _is_secret(n)}
 
     for child in sorted(src.iterdir()):
         if child.name in _ignore(src, [child.name]):
@@ -547,11 +565,24 @@ def publish_connector(name: str, target_root: Path, constitution: Path,
 
     # Rewrite the connector's pyproject deps to git-refs; strip uv workspace.
     pp = target / "pyproject.toml"
-    pp.write_text(_rewrite_connector_pyproject(pp.read_text(), pin))
+    rewritten = _rewrite_connector_pyproject(pp.read_text(), pin)
+    pp.write_text(rewritten)
+    # Surface (don't hide) any sciqnt dep left bare — a HELD package (tui/platform)
+    # with no repo yet. It only appears in an OPTIONAL extra (default install is
+    # unaffected), but `pip install <dist>[extra]` will fail until the app ships.
+    # A bare `"sciqnt-x"` (closing quote right after the name — no ` @ git+…`) is a
+    # held package; catches both multi-line deps and inline extras like
+    # `tui = ["sciqnt-tui"]`. Exclude the project's OWN name.
+    own = re.search(r'^\s*name\s*=\s*"([^"]+)"', rewritten, re.M)
+    dangling = sorted(set(re.findall(r'"(sciqnt-[a-z0-9-]+)"', rewritten))
+                      - ({own.group(1)} if own else set()))
+    if dangling:
+        print(f"  · NOTE: optional extra(s) reference unpublished held package(s): "
+              f"{dangling} — `pip install [extra]` fails until the app ships")
 
-    # Governance + hygiene overlay.
+    # Governance + hygiene overlay (.gitignore secret lines derived from the sets).
     _copy_workflows(target, constitution)
-    (target / ".gitignore").write_text(GITIGNORE + ".env\n.env.local\n*.pem\n")
+    (target / ".gitignore").write_text(GITIGNORE + _secret_gitignore_lines())
     if not (target / "NOTICE.md").exists():
         disclaimer = ("This connector is **reverse-engineered / unofficial** — it talks "
                       "to an interface the provider did not publish for this purpose."
@@ -562,9 +593,10 @@ def publish_connector(name: str, target_root: Path, constitution: Path,
     if license_src.exists():
         shutil.copy2(license_src, target / "LICENSE")
 
-    # Safety net: assert no secret slipped through.
-    leaked = [p.name for p in target.rglob("*")
-              if p.name in SECRET_NAMES or p.suffix in SECRET_SUFFIXES]
+    # Safety net: assert no secret slipped through (same matcher as the exclude).
+    leaked = [str(p.relative_to(target)) for p in target.rglob("*")
+              if p.is_file() and ".git/" not in str(p.relative_to(target))
+              and _is_secret(p.name)]
     if leaked:
         raise SystemExit(f"ABORT — secret file(s) would be published: {leaked}")
     print("  · tree copied (secrets excluded), deps git-ref'd, governance overlaid")
