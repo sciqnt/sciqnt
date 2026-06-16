@@ -51,11 +51,14 @@ A reviewer that finds nothing says so plainly. No invented findings.
   or model discretion? Read is wide; write is a separate, higher trust tier. 🛑
 - Connector provenance/risk-tier declared (official-api > csv/file > reverse-engineered/browser)?
 
-### Connector contributions — the liability firewall (the zone rule)
-*(`research/connector-publishing.md` / `distribution-governance.md`)*
-- Is a **reverse-engineered / unofficial** connector being added **into this
-  repo / the `sciqnt/` org**? It must NOT be — it belongs in the contributor's
-  own repo (the liability firewall). 🛑
+### Connector contributions — disclaimers & trademark separation
+*(`distribution-governance.md` §§2–4; the zone rule EVOLVED → component world 2026-06-16)*
+- **Zone rule SUPERSEDED.** The old "reverse-engineered connectors must NEVER live
+  under `sciqnt/`" liability firewall was reversed by the owner-green-lit component
+  world: everything is org-owned + open (ccxt / yt-dlp posture — "standardizing brokers
+  for the age of AI"). A reverse-engineered connector under `sciqnt/` is therefore **no
+  longer a 🛑 on placement alone**; what keeps that posture safe is the disclaimer +
+  trademark hygiene below. (See `research/component-world-blueprint.md`.)
 - Does a connector ship an accurate **`NOTICE.md`** (no affiliation/endorsement,
   clean-room interop, at-your-own-risk, runs on the user's own account) and a
   manifest with honest `risk_tier`, `flavours.<f>.risk`, and `endorsed: false`?

@@ -1,5 +1,17 @@
 # Distribution & governance framework
 
+> **⚠️ Topology SUPERSEDED (2026-06-16) → the component world.** §1's "monorepo-core +
+> federated-community, NEVER org polyrepo" topology was reversed by an owner-green-lit
+> decision: everything is org-owned + open (the liability firewall comes down), and
+> each component is its own `sciqnt/sq-*` repo. The atomicity property §1 rightly
+> defends is preserved via a **virtual-monorepo transition** — the mono stays the
+> single source of truth and component repos are *generated* from it by the publishing
+> bot until graduation. See `~/Projects/sciqnt-org/sq-constitution/MIGRATION.md` +
+> `research/component-world-blueprint.md`. §§2–6 (liability framing, agentic governance,
+> license posture, DCO-only) still hold. Below is kept as the rationale that informed
+> the transition (the coupling/atomicity analysis is exactly what the publishing bot
+> mechanizes).
+>
 > **Status: decided (2026-06-14).** This is the load-bearing decision for how
 > sciqnt's connector ecosystem is hosted, governed, contributed to, monetized,
 > and discovered. Grounded in two deep-research passes (topology/liability/
