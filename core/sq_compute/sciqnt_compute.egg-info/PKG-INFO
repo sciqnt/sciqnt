@@ -1,7 +1,0 @@
-Metadata-Version: 2.4
-Name: sciqnt-compute
-Version: 0.0.1
-Summary: sq-compute — pure compute over canonical entities
-License: MIT
-Requires-Python: >=3.10
-Requires-Dist: sciqnt-schema

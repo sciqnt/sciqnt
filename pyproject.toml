@@ -1,7 +1,58 @@
-# sciqnt — uv workspace root (virtual: members only, no root package).
-# One lockfile, every core package + bundle a real distribution — the
-# release-framework design (research/release-framework.md §1) and the
-# composable doctrine's "units stand alone" made literal: anyone can
-# `pip install` ONE bundle and get exactly its declared contract deps.
-[tool.uv.workspace]
-members = ["core/sq_*", "modules/sq-*"]
+# sciqnt — the installable app / CLI front door (the repurposed monorepo).
+#
+# The monorepo's libraries + connectors graduated to their own `sciqnt/sq-*` repos
+# (the component world). What remains here IS the app: the dispatcher (sq_platform),
+# the TUI (sq_tui), and the settings UI (sq_config_ui), bundled into ONE `sciqnt`
+# distribution whose library deps are pinned to the component repos.
+#
+# Transition pinning: library deps resolve from the `sciqnt/sq-*` repos by git-ref
+# @v0.1.0 (PyPI publish + re-pin is the final step). Connectors are NOT deps — they
+# are added at runtime, sovereign, via `sciqnt modules add owner/repo`.
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sciqnt"
+version = "0.1.0"
+description = "sciqnt — local-first, agent-native cross-asset portfolio tracker & data layer (CLI/TUI)"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "sciqnt" }]
+dependencies = [
+    # The app's library layer — pinned to the component repos (git-ref during the
+    # transition; flip to `sciqnt-<x>>=0.1,<0.2` once published to PyPI).
+    "sciqnt-schema @ git+https://github.com/sciqnt/sq-schema@v0.1.0",
+    "sciqnt-fmt @ git+https://github.com/sciqnt/sq-fmt@v0.1.0",
+    "sciqnt-config @ git+https://github.com/sciqnt/sq-config@v0.1.0",
+    "sciqnt-price-store @ git+https://github.com/sciqnt/sq-price-store@v0.1.0",
+    "sciqnt-compute @ git+https://github.com/sciqnt/sq-compute@v0.1.0",
+    "sciqnt-performance @ git+https://github.com/sciqnt/sq-performance@v0.1.0",
+    "sciqnt-market-data @ git+https://github.com/sciqnt/sq-market-data@v0.1.0",
+    "sciqnt-fx @ git+https://github.com/sciqnt/sq-fx@v0.1.0",
+    "sciqnt-secrets @ git+https://github.com/sciqnt/sq-secrets@v0.1.0",
+    "sciqnt-analytics @ git+https://github.com/sciqnt/sq-analytics@v0.1.0",
+    "sciqnt-aggregator @ git+https://github.com/sciqnt/sq-aggregator@v0.1.0",
+    "sciqnt-skills @ git+https://github.com/sciqnt/sq-skills@v0.1.0",
+    "sciqnt-agents @ git+https://github.com/sciqnt/sq-agents@v0.1.0",
+    # Interactive surface.
+    "prompt-toolkit",
+    "questionary",
+]
+
+[project.urls]
+Homepage = "https://github.com/sciqnt/sciqnt"
+Source = "https://github.com/sciqnt/sciqnt"
+
+[project.scripts]
+sciqnt = "sciqnt_cli:main"
+
+[tool.setuptools]
+packages = ["sq_platform", "sq_tui", "sq_config_ui"]
+py-modules = ["sciqnt_cli"]
+
+[tool.setuptools.package-dir]
+sq_platform = "core/sq_platform"
+sq_tui = "core/sq_tui"
+sq_config_ui = "modules/sq-config/src/sq_config_ui"

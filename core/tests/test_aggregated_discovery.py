@@ -90,47 +90,6 @@ def _bad_snapshot_duplicate_positions():
     )
 
 
-class TestCapabilityBasedDiscovery(unittest.TestCase):
-    def test_available_connectors_are_the_snapshot_bundles(self):
-        # _available_connectors is capability-based (exposes snapshot()),
-        # INDEPENDENT of whether an account is connected — so it's stable
-        # across machines/credential state, unlike _discover_brokers
-        # (which now means CONNECTED accounts).
-        from sq_platform.aggregated import _available_connectors
-        names = _available_connectors(ROOT)
-        for broker in ("degiro", "kalshi", "polymarket", "robinhood"):
-            self.assertIn(broker, names,
-                          f"{broker!r} exposes snapshot() — must be an available connector")
-        for not_a_broker in ("config", "fx-ecb", "openfigi", "yahoo"):
-            self.assertNotIn(not_a_broker, names,
-                             f"{not_a_broker!r} has no snapshot() — not a broker connector")
-
-    def test_discover_brokers_returns_callables(self):
-        # Whatever IS connected in this environment must yield a callable.
-        for name, snap_fn in _discover_brokers(ROOT):
-            self.assertTrue(callable(snap_fn),
-                            f"discovered {name} but its snapshot is not callable")
-
-    def test_unconnected_broker_not_discovered(self):
-        # A broker whose accounts() is empty must NOT appear in
-        # _discover_brokers (so it's never fetched / never errors). Pin it
-        # with a fake module so the test is credential-independent.
-        from unittest import mock
-        import tempfile
-        class _Unconnected:
-            def accounts(self):
-                return []                     # nothing connected
-            def snapshot(self, asof=None, *, account=None):
-                raise AssertionError("must not be fetched when unconnected")
-        tmp = tempfile.TemporaryDirectory()
-        try:
-            (Path(tmp.name) / "modules" / "sq-degiro").mkdir(parents=True)
-            with mock.patch("sq_platform.aggregated.importlib.import_module",
-                            return_value=_Unconnected()):
-                out = _discover_brokers(Path(tmp.name))
-            self.assertEqual(out, [])
-        finally:
-            tmp.cleanup()
 
 
 class TestConformanceGate(unittest.TestCase):

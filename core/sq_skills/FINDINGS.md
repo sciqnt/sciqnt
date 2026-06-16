@@ -1,7 +1,0 @@
-# sq_skills — findings (living quirks log)
-
-- **This is the ONE place sciqnt writes outside its own tree**: `install()` writes into `~/.claude/skills/<name>/` (folder skill, full frontmatter) and `~/.codex/prompts/<name>.md` (single slash-prompt, body + supporting docs appended). Sovereignty boundary: the user is informed on-screen (the `installed …` note in the hand-off banner), writes are idempotent overwrites of OUR named skills only, and `home=` is injectable so tests never touch the real `~/.` (2026-06-03 maintenance).
-- **Skill content is non-secret by design**: skills carry procedural knowledge ("run `sciqnt --once`", the connector contract) — never account data, figures, or credentials. The agent fetches live data itself via the CLI. Keep it that way: embedding a portfolio snapshot in a skill would persist personal data into `~/.claude`.
-- **One general skill per capability group** (`for_group`): portfolio → `sq-portfolio`, connectors → `sq-connectors`. Entry points differ only in the injected launch prompt — don't multiply skills per task.
-- **The `description` frontmatter is the selection mechanism** (what + when, third person) — that's what makes Claude auto-load the skill from a bare intent like "help me connect a broker". Keep descriptions sharp or auto-discovery degrades.
-- Folder agents (claude) get supporting files as siblings (progressive disclosure — `building-a-connector.md` loads only when building); prompt agents (codex) get them appended into the single file.

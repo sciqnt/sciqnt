@@ -170,16 +170,20 @@ def _discover_brokers(root) -> list[tuple[str, Callable]]:
         for acct in acct_list:
             label = name if acct is None else f"{name}:{acct}"
             out.append((label, _make_broker_call(mod, acct)))
-    # Demo void-fill: the sq-demo bundle is the first-run experience —
-    # synthetic, deterministic, THE public figures. It participates only
-    # while no REAL account is connected (config demo_mode: auto|on|off);
-    # the bundle itself can't know about other brokers (modularity), so
-    # the platform owns this rule.
-    mode = sq_config.get("demo_mode", "auto")
-    real = [(lb, fn) for lb, fn in out if lb.split(":")[0] != "demo"]
+    return _apply_demo_void_fill(out, sq_config.get("demo_mode", "auto"))
+
+
+def _apply_demo_void_fill(brokers, mode):
+    """The PLATFORM's demo void-fill rule (the bundle can't know about other
+    brokers — modularity — so the platform owns it): the sq-demo bundle is the
+    first-run experience (synthetic, deterministic, THE public figures) and
+    participates ONLY while no REAL account is connected. `mode` is config
+    `demo_mode`: 'auto' → demo shows only when alone; 'on' → always; 'off' →
+    never. Pure on the (label, fn) broker list. Tested in tests/test_void_fill.py."""
+    real = [(lb, fn) for lb, fn in brokers if lb.split(":")[0] != "demo"]
     if mode == "off" or (mode == "auto" and real):
         return real
-    return out
+    return brokers
 
 
 def _available_connectors(root) -> list[str]:
