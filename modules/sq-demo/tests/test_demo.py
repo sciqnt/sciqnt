@@ -18,6 +18,15 @@ import sq_demo                                                  # noqa: E402
 from sq_demo import portfolio                                   # noqa: E402
 from sq_schema import TransactionType, conformance              # noqa: E402
 
+# sq_platform is the interactive APP layer — present in the mono workspace, absent
+# from a standalone connector install (a connector must NOT depend on the app).
+# App-level aggregation tests skip when it isn't importable.
+try:
+    import sq_platform  # noqa: F401
+    _HAVE_PLATFORM = True
+except ImportError:
+    _HAVE_PLATFORM = False
+
 ASOF = datetime(2026, 6, 1, tzinfo=timezone.utc)
 
 
@@ -69,6 +78,7 @@ class TestDemoSnapshot(unittest.TestCase):
         self.assertTrue(sq_demo.DEMO)
 
 
+@unittest.skipUnless(_HAVE_PLATFORM, "sq-platform (app layer) not installed standalone")
 class TestVoidFill(unittest.TestCase):
     """The PLATFORM owns when demo participates (the bundle can't know
     about other brokers). Environment-independent: assert the invariant,

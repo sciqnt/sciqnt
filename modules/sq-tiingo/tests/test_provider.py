@@ -19,7 +19,11 @@ ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / "modules" / "sq-tiingo" / "src"))
 sys.path.insert(0, str(ROOT / "core"))
 
-from sq_price_store import PriceStore                               # noqa: E402
+try:                                                               # noqa: E402
+    from sq_price_store import PriceStore                           # noqa: E402
+    _HAVE_STORE = True
+except ImportError:                       # optional archive integration (a leaf lib)
+    _HAVE_STORE = False
 from sq_schema import Price, PriceProvider                          # noqa: E402
 from sq_tiingo import TiingoProvider                                # noqa: E402
 from sq_tiingo.provider import _supported                           # noqa: E402
@@ -146,6 +150,7 @@ class TestAuthVisibility(unittest.TestCase):
         self.assertEqual(err, "")
 
 
+@unittest.skipUnless(_HAVE_STORE, "sq-price-store not installed (optional archive integration)")
 class TestArchive(unittest.TestCase):
     def setUp(self):
         self._tmp = tempfile.TemporaryDirectory()

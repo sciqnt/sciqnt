@@ -23,8 +23,9 @@ import sq_degiro                                                  # noqa: E402
 
 
 def _fixture_csv():
-    """Path to the synthetic Degiro fixture set used by other tests."""
-    return ROOT / "modules" / "sq-degiro" / "tests" / "fixtures"
+    """Path to the synthetic Degiro fixture set. Resolved RELATIVE TO THIS TEST
+    so it works both in the monorepo and in the standalone sq-degiro repo."""
+    return Path(__file__).resolve().parent / "fixtures"
 
 
 def _set_up_fixture(tmpdir: Path):
