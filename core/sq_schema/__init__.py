@@ -72,6 +72,8 @@ Honest gaps (declared, not silent)
   `Instrument.terms: dict` until a real connector forces typed schemas.
 - **FIGI resolution** — `identifiers["figi"]` populated later by `sq-openfigi`.
 """
+__version__ = "0.1.0"   # the contract's semver — SINGLE source (pyproject reads this attr).
+
 from .bitemporal import Bitemporal
 from .enums import AssetClass, TransactionType
 from .account import Account
@@ -104,4 +106,7 @@ __all__ = [
     "Transaction",
     "PortfolioSnapshot",
     "conformance",
+    "contract_json_schema",
 ]
+
+from .json_schema import contract_json_schema

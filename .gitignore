@@ -27,3 +27,8 @@ venv/
 screen.txt
 .sciqnt-agent-task.md
 .sciqnt-agent-launch.command
+
+# Python build artifacts
+build/
+*.egg-info/
+dist/

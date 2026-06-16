@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "sciqnt-schema"
-version = "0.0.1"
+dynamic = ["version"]                # single source: sq_schema.__version__
 description = "sq-schema — canonical cross-asset schema for sciqnt"
 requires-python = ">=3.10"
 license = { text = "MIT" }
@@ -15,5 +15,11 @@ dependencies = [
 [tool.setuptools]
 packages = ["sq_schema"]
 
+[tool.setuptools.dynamic]
+version = { attr = "sq_schema.__version__" }
+
 [tool.setuptools.package-dir]
 sq_schema = "."
+
+[tool.setuptools.package-data]
+sq_schema = ["contract.schema.json"]   # ship the language-agnostic contract artifact
