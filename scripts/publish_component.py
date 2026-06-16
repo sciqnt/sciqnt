@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -278,6 +279,14 @@ def _copy_package(spec: Spec, target: Path):
     missing = data_files - {f.name for f in spec.pkg_dir.iterdir()}
     if missing:
         raise SystemExit(f"{spec.repo}: declared package_data not found: {sorted(missing)}")
+    # If the package declares __version__ (sq_schema does, for its contract-artifact
+    # stamp), it MUST match the stamped dist version — else the git-ref a dependent
+    # pins points at code whose declared version disagrees with the tag. Guard it.
+    init = dst / "__init__.py"
+    m = re.search(r'^__version__\s*=\s*["\']([^"\']+)["\']', init.read_text(), re.M)
+    if m and m.group(1) != spec.version:
+        raise SystemExit(f"{spec.repo}: package __version__ {m.group(1)!r} != "
+                         f"Spec.version {spec.version!r} — reconcile before publishing")
     # Living docs (CHANGELOG, FINDINGS) live at the repo root in the standalone
     # layout — carry them over verbatim so the module's findings travel with it.
     for doc in ("CHANGELOG.md", "FINDINGS.md"):
