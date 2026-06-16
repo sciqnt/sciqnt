@@ -28,15 +28,23 @@ import venv
 from pathlib import Path
 
 MONO = Path(__file__).resolve().parent.parent
-CONSTITUTION = Path.home() / "Projects/sciqnt-org/sq-constitution"   # caller-templates source
-DEFAULT_TARGET_ROOT = Path.home() / "Projects/sciqnt-org"
+# caller-templates source — overridable via --constitution / $SCIQNT_CONSTITUTION
+# (it's a sibling checkout, not a fixed location).
+DEFAULT_CONSTITUTION = Path(
+    os.environ.get("SCIQNT_CONSTITUTION",
+                   Path.home() / "Projects/sciqnt-org/sq-constitution"))
+DEFAULT_TARGET_ROOT = Path(
+    os.environ.get("SCIQNT_ORG_ROOT", Path.home() / "Projects/sciqnt-org"))
 
 
 class Spec:
     """One component's publish recipe: where its code/tests live in the mono and
-    how the standalone distribution is described."""
+    how the standalone distribution is described. Every per-component shape —
+    deps, non-.py data files — is DATA here, so a new component is genuinely one
+    entry (no template edits)."""
 
-    def __init__(self, repo, dist, import_name, pkg_dir, tests, description, role):
+    def __init__(self, repo, dist, import_name, pkg_dir, tests, description, role,
+                 dependencies=(), package_data=()):
         self.repo = repo                  # sciqnt/<repo> short name, e.g. "sq-schema"
         self.dist = dist                  # PyPI distribution, e.g. "sciqnt-schema"
         self.import_name = import_name    # python import, e.g. "sq_schema"
@@ -44,6 +52,8 @@ class Spec:
         self.tests = [MONO / t for t in tests]   # test files to carry over
         self.description = description
         self.role = role                  # topic/manifest role, NOT in the repo name
+        self.dependencies = list(dependencies)    # runtime deps for this dist
+        self.package_data = list(package_data)    # non-.py files shipped IN the package
 
 
 SPECS = {
@@ -56,6 +66,8 @@ SPECS = {
         description="sq-schema — the canonical cross-asset contract for sciqnt "
                     "(point-in-time-correct schema + conformance + JSON-Schema artifact).",
         role="contract-hub",
+        dependencies=["pydantic>=2.5,<3"],
+        package_data=["contract.schema.json"],   # the language-agnostic artifact
     ),
 }
 
@@ -75,8 +87,7 @@ requires-python = ">=3.10"
 license = {{ text = "MIT" }}
 authors = [{{ name = "sciqnt" }}]
 dependencies = [
-    "pydantic>=2.5,<3",
-]
+{dependencies_block}]
 
 [project.urls]
 Homepage = "https://github.com/sciqnt/{repo}"
@@ -88,10 +99,7 @@ packages = ["{import_name}"]
 
 [tool.setuptools.dynamic]
 version = {{ attr = "{import_name}.__version__" }}
-
-[tool.setuptools.package-data]
-{import_name} = ["contract.schema.json"]
-"""
+{package_data_block}"""
 
 README = """\
 # {repo} · `{dist}`
@@ -157,11 +165,15 @@ def _reset_tree(target: Path):
 def _copy_package(spec: Spec, target: Path):
     dst = target / "src" / spec.import_name
     dst.mkdir(parents=True, exist_ok=True)
+    data_files = set(spec.package_data)
     for f in sorted(spec.pkg_dir.iterdir()):
-        # Ship the package source + the contract artifact; skip build cruft and
+        # Ship the package source + the declared data files; skip build cruft and
         # the package's own pyproject/CHANGELOG (regenerated / relocated).
-        if f.suffix == ".py" or f.name == "contract.schema.json":
+        if f.suffix == ".py" or f.name in data_files:
             shutil.copy2(f, dst / f.name)
+    missing = data_files - {f.name for f in spec.pkg_dir.iterdir()}
+    if missing:
+        raise SystemExit(f"{spec.repo}: declared package_data not found: {sorted(missing)}")
     # CHANGELOG lives at the repo root in the standalone layout.
     changelog = spec.pkg_dir / "CHANGELOG.md"
     if changelog.exists():
@@ -176,19 +188,34 @@ def _copy_tests(spec: Spec, target: Path):
         shutil.copy2(t, dst / t.name)
 
 
-def _copy_workflows(target: Path):
+def _copy_workflows(target: Path, constitution: Path):
     dst = target / ".github" / "workflows"
     dst.mkdir(parents=True, exist_ok=True)
-    src = CONSTITUTION / "caller-templates"
+    src = constitution / "caller-templates"
     if not src.exists():
-        raise SystemExit(f"caller-templates not found at {src} — clone sq-constitution first")
+        raise SystemExit(
+            f"caller-templates not found at {src} — clone sq-constitution there, "
+            f"or pass --constitution / set $SCIQNT_CONSTITUTION")
     for wf in sorted(src.glob("*.yml")):
         shutil.copy2(wf, dst / wf.name)
 
 
+def _render_pyproject_blocks(spec: Spec) -> dict:
+    deps = spec.dependencies or []
+    deps_block = "".join(f'    "{d}",\n' for d in deps)
+    if spec.package_data:
+        items = ", ".join(f'"{p}"' for p in spec.package_data)
+        pkg_data_block = (f"\n[tool.setuptools.package-data]\n"
+                          f"{spec.import_name} = [{items}]\n")
+    else:
+        pkg_data_block = ""
+    return {"dependencies_block": deps_block, "package_data_block": pkg_data_block}
+
+
 def _write_meta(spec: Spec, target: Path):
     fields = dict(repo=spec.repo, dist=spec.dist, import_name=spec.import_name,
-                  description=spec.description, role=spec.role)
+                  description=spec.description, role=spec.role,
+                  **_render_pyproject_blocks(spec))
     (target / "pyproject.toml").write_text(PYPROJECT.format(**fields))
     (target / "README.md").write_text(README.format(**fields))
     (target / "manifest.yaml").write_text(MANIFEST.format(**fields))
@@ -228,7 +255,7 @@ def _verify_clean_install(spec: Spec, target: Path):
     print("  ·", (r.stderr.strip().splitlines() or ["ok"])[-1])
 
 
-def publish(name: str, target_root: Path, verify: bool = True) -> Path:
+def publish(name: str, target_root: Path, constitution: Path, verify: bool = True) -> Path:
     spec = SPECS[name]
     target = target_root / spec.repo
     target.mkdir(parents=True, exist_ok=True)
@@ -236,7 +263,7 @@ def publish(name: str, target_root: Path, verify: bool = True) -> Path:
     _reset_tree(target)
     _copy_package(spec, target)
     _copy_tests(spec, target)
-    _copy_workflows(target)
+    _copy_workflows(target, constitution)
     _write_meta(spec, target)
     print("  · tree generated")
     if verify:
@@ -249,11 +276,15 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("component", choices=sorted(SPECS), help="component to publish")
     ap.add_argument("--target-root", type=Path, default=DEFAULT_TARGET_ROOT,
-                    help="dir that holds the per-component repo checkouts")
+                    help="dir that holds the per-component repo checkouts "
+                         "($SCIQNT_ORG_ROOT)")
+    ap.add_argument("--constitution", type=Path, default=DEFAULT_CONSTITUTION,
+                    help="sq-constitution checkout (caller-templates source) "
+                         "($SCIQNT_CONSTITUTION)")
     ap.add_argument("--no-verify", action="store_true",
                     help="skip the isolated clean-install + test verification")
     a = ap.parse_args()
-    target = publish(a.component, a.target_root, verify=not a.no_verify)
+    target = publish(a.component, a.target_root, a.constitution, verify=not a.no_verify)
     print(f"done → {target}")
 
 
