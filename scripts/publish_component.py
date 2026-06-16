@@ -169,6 +169,28 @@ SPECS = {
         description="sq-aggregator — cross-account aggregation/standardization layer for sciqnt.",
         role="aggregation-layer", sciqnt_deps=["sq-analytics", "sq-fx", "sq-schema"],
     ),
+
+    # ---- App-layer libs (the non-interactive pieces of the app) -------------
+    "sq-skills": Spec(
+        repo="sq-skills", dist="sciqnt-skills", import_name="sq_skills",
+        pkg_dir="core/sq_skills", tests=["core/tests/test_skills.py"],
+        description="sq-skills — the agent-facing skill registry/loader for sciqnt.",
+        role="agent-substrate",
+    ),
+    "sq-agents": Spec(
+        repo="sq-agents", dist="sciqnt-agents", import_name="sq_agents",
+        pkg_dir="core/sq_agents", tests=["core/tests/test_agents.py"],
+        description="sq-agents — detect installed agent CLIs + launch a preferred agent "
+                    "with on-screen context ('use agent to X'), for sciqnt.",
+        role="agent-launcher", sciqnt_deps=["sq-config"],
+    ),
+    "sq-scaffold": Spec(
+        repo="sq-scaffold", dist="sciqnt-scaffold", import_name="sq_scaffold",
+        pkg_dir="core/sq_scaffold", tests=["core/tests/test_scaffold.py"],
+        description="sq-scaffold — generate a new connector bundle skeleton, then hand it "
+                    "to an agent to fill against the contract + conformance harness.",
+        role="connector-generator", sciqnt_deps=["sq-schema", "sq-secrets"],
+    ),
 }
 
 # Split order — siblings must exist + be tagged before a dependent's git-ref
@@ -400,6 +422,184 @@ def publish(name: str, target_root: Path, constitution: Path,
     return target
 
 
+# ---------------------------------------------------------------------------
+# Connectors. Unlike core packages, a connector already lives in the mono as a
+# STANDALONE repo (`modules/sq-<x>/` with its own src/ tests/ pyproject/ manifest/
+# SKILL). So we COPY it (never the secrets), rewrite its internal sciqnt-* deps to
+# git-refs, strip the uv-workspace block, overlay governance, add a disclaimer, and
+# verify. The dist→repo map comes from SPECS (libs) + the connector list itself.
+# ---------------------------------------------------------------------------
+
+# Every connector that graduates from modules/. (modules/sq-config is the config-UI
+# — app-layer, depends on platform/tui — so it stays with the held app, NOT here.)
+CONNECTORS = [
+    "sq-demo", "sq-edgar", "sq-firds", "sq-openfigi", "sq-news-rss", "sq-fx-ecb",
+    "sq-yahoo", "sq-tiingo", "sq-finnhub", "sq-kalshi", "sq-polymarket",
+    "sq-degiro", "sq-robinhood",
+]
+# Reverse-engineered / unofficial brokers — the disclaimer matters most here.
+REVERSE_ENGINEERED = {"sq-degiro", "sq-robinhood", "sq-yahoo", "sq-polymarket"}
+
+# NEVER copy these into a public repo (credentials / local state).
+SECRET_NAMES = {".env", ".env.local"}
+SECRET_SUFFIXES = {".pem", ".key"}
+
+
+def _repo_for_dist(dist: str):
+    """sciqnt-<x> → its sq-<x> repo, IF we publish it. Libs come from SPECS;
+    connectors map by convention. Returns None for HELD packages (tui/platform),
+    whose deps stay bare (optional extras that resolve once the app ships)."""
+    for sp in SPECS.values():
+        if sp.dist == dist:
+            return sp.repo, sp.version
+    if dist.startswith("sciqnt-"):
+        cand = "sq-" + dist[len("sciqnt-"):]
+        if cand in CONNECTORS:
+            return cand, "0.1.0"
+    return None
+
+
+def _rewrite_connector_pyproject(text: str, pin: str) -> str:
+    """Line-based, format-preserving rewrite: git-ref each sciqnt-* DEPENDENCY
+    (list items only — never the project's own `name =` or the uv.sources block),
+    and drop `[tool.uv.sources]` (a mono-only workspace construct)."""
+    out, skip = [], False
+    for line in text.splitlines():
+        stripped = line.strip()
+        if stripped.startswith("[tool.uv.sources]"):
+            skip = True
+            continue
+        if skip:
+            if stripped.startswith("[") and not stripped.startswith("[tool.uv.sources]"):
+                skip = False          # next section — stop skipping, fall through
+            else:
+                continue
+        # A dependency list item is a bare quoted string with no '=' (which would
+        # mean name/readme/uv-source). Only those get rewritten.
+        if stripped.startswith('"sciqnt-') and "=" not in stripped and "@" not in stripped:
+            indent = line[: len(line) - len(line.lstrip())]
+            tail = "," if stripped.endswith(",") else ""
+            token = stripped.rstrip(",").strip('"')          # e.g. sciqnt-schema or sciqnt-fmt>=1
+            dist = re.split(r"[<>=!~\[ ]", token, 1)[0]      # strip any version/extra
+            info = _repo_for_dist(dist)
+            if info and pin == "git":
+                repo, ver = info
+                out.append(f'{indent}"{dist} @ git+https://github.com/sciqnt/{repo}@v{ver}"{tail}')
+            elif info and pin == "pypi":
+                out.append(f'{indent}"{dist}>=0.1,<0.2"{tail}')
+            else:
+                out.append(line)      # HELD pkg (tui/platform) — leave bare
+        else:
+            out.append(line)
+    return "\n".join(out) + ("\n" if text.endswith("\n") else "")
+
+
+NOTICE = """\
+# NOTICE — {repo}
+
+`{repo}` is a community connector in the sciqnt ecosystem. {disclaimer}
+
+- **Not affiliated** with, endorsed by, or sponsored by the data source/broker it
+  targets. All product and broker names are used **nominatively** only, to identify
+  the integration target — never to imply association or endorsement.
+- **Runs on the user's own account / credentials**, locally. sciqnt takes no custody
+  of accounts, keys, or data (sovereignty: "fire us and keep everything").
+- **At your own risk.** Provided under the MIT License, AS IS, with no warranty. Using
+  it may be subject to the target's terms of service — that's between you and them.
+- Trust is earned through the **conformance suite**, not claimed. See `manifest.yaml`
+  for the declared `risk_tier` and flavours.
+"""
+
+
+def publish_connector(name: str, target_root: Path, constitution: Path,
+                      pin: str = "git", verify: bool = True) -> Path:
+    src = MONO / "modules" / name
+    if not src.exists():
+        raise SystemExit(f"connector source not found: {src}")
+    target = target_root / name
+    target.mkdir(parents=True, exist_ok=True)
+    print(f"publishing connector {name} → {target}  [pin={pin}]")
+
+    # Wipe everything we own/copy (preserve .git), then copy the connector tree
+    # MINUS secrets, build cruft, vcs, and the verify venv.
+    for child in list(target.iterdir()):
+        if child.name == ".git":
+            continue
+        shutil.rmtree(child) if child.is_dir() else child.unlink()
+
+    def _ignore(d, names):
+        drop = {"__pycache__", ".git", ".venv", "build", "dist", ".verify-venv"}
+        out = set()
+        for n in names:
+            if n in drop or n in SECRET_NAMES or Path(n).suffix in SECRET_SUFFIXES \
+               or n.endswith(".egg-info"):
+                out.add(n)
+        return out
+
+    for child in sorted(src.iterdir()):
+        if child.name in _ignore(src, [child.name]):
+            continue
+        dest = target / child.name
+        if child.is_dir():
+            shutil.copytree(child, dest, ignore=_ignore)
+        else:
+            shutil.copy2(child, dest)
+
+    # Rewrite the connector's pyproject deps to git-refs; strip uv workspace.
+    pp = target / "pyproject.toml"
+    pp.write_text(_rewrite_connector_pyproject(pp.read_text(), pin))
+
+    # Governance + hygiene overlay.
+    _copy_workflows(target, constitution)
+    (target / ".gitignore").write_text(GITIGNORE + ".env\n.env.local\n*.pem\n")
+    if not (target / "NOTICE.md").exists():
+        disclaimer = ("This connector is **reverse-engineered / unofficial** — it talks "
+                      "to an interface the provider did not publish for this purpose."
+                      if name in REVERSE_ENGINEERED else
+                      "It integrates a public or sanctioned interface of its data source.")
+        (target / "NOTICE.md").write_text(NOTICE.format(repo=name, disclaimer=disclaimer))
+    license_src = MONO / "LICENSE"
+    if license_src.exists():
+        shutil.copy2(license_src, target / "LICENSE")
+
+    # Safety net: assert no secret slipped through.
+    leaked = [p.name for p in target.rglob("*")
+              if p.name in SECRET_NAMES or p.suffix in SECRET_SUFFIXES]
+    if leaked:
+        raise SystemExit(f"ABORT — secret file(s) would be published: {leaked}")
+    print("  · tree copied (secrets excluded), deps git-ref'd, governance overlaid")
+
+    if verify:
+        _verify_connector(target)
+        print("  · VERIFIED: installs clean + tests green in isolation")
+    return target
+
+
+def _verify_connector(target: Path):
+    """Like _verify_clean_install but install the default extra-less dist + run its
+    tests. Connectors keep live/network tests behind their own skips; the headless
+    conformance path must pass offline."""
+    vdir = target / ".verify-venv"
+    if vdir.exists():
+        shutil.rmtree(vdir)
+    venv.create(vdir, with_pip=True)
+    py = vdir / ("Scripts" if os.name == "nt" else "bin") / "python"
+    r = subprocess.run([str(py), "-m", "pip", "install", "-q", "."],
+                       cwd=target, capture_output=True, text=True)
+    if r.returncode:
+        shutil.rmtree(vdir)
+        raise SystemExit(f"connector clean-install FAILED:\n{r.stdout[-2000:]}\n{r.stderr[-2000:]}")
+    r = subprocess.run([str(py), "-m", "unittest", "discover", "-s", "tests", "-p", "test_*.py"],
+                       cwd=target, capture_output=True, text=True)
+    shutil.rmtree(vdir)
+    for cruft in list(target.glob("build")) + list(target.rglob("*.egg-info")):
+        if cruft.is_dir():
+            shutil.rmtree(cruft)
+    if r.returncode:
+        raise SystemExit(f"connector tests FAILED:\n{r.stdout[-3000:]}\n{r.stderr[-3000:]}")
+    print("  ·", (r.stderr.strip().splitlines() or ["ok"])[-1])
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("component", choices=sorted(SPECS), nargs="?",
@@ -419,12 +619,23 @@ def main():
                          "($SCIQNT_CONSTITUTION)")
     ap.add_argument("--pin", choices=["git", "pypi"], default="git",
                     help="how to pin sibling sciqnt deps: git-ref (transition) or pypi")
+    ap.add_argument("--connector", choices=sorted(CONNECTORS),
+                    help="publish a single connector from modules/")
+    ap.add_argument("--all-connectors", action="store_true",
+                    help="publish every connector (their lib deps must already be shipped+tagged)")
     ap.add_argument("--no-verify", action="store_true",
                     help="skip the isolated clean-install + test verification")
     a = ap.parse_args()
+    if a.all_connectors or a.connector:
+        cnames = CONNECTORS if a.all_connectors else [a.connector]
+        for n in cnames:
+            target = publish_connector(n, a.target_root, a.constitution,
+                                       pin=a.pin, verify=not a.no_verify)
+            print(f"done → {target}")
+        return
     names = [n for tier in TIERS for n in tier] if a.all else [a.component]
     if not a.all and not a.component:
-        ap.error("name a component or pass --all")
+        ap.error("name a component, --connector NAME, --all, or --all-connectors")
     for n in names:
         target = publish(n, a.target_root, a.constitution, pin=a.pin, verify=not a.no_verify)
         print(f"done → {target}")
