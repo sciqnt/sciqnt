@@ -23,6 +23,13 @@ import sq_config                                                  # noqa: E402
 import sq_fx                                                      # noqa: E402
 from sq_schema import FxRate, FxRateProvider                      # noqa: E402
 
+# The `ecb` provider ships in the OPTIONAL sq-fx-ecb connector, not sq_fx core.
+# It's present in the mono workspace but absent from a standalone sq-fx install —
+# so the tests that assert ecb-resolution must skip (not fail) when it isn't
+# installed. Core must never depend on a connector (the dependency arrow points
+# connector → core), which is exactly why this is a runtime-optional provider.
+_ECB_INSTALLED = "ecb" in sq_fx.available()
+
 
 class _FakeProvider:
     """Deterministic FxRateProvider for substrate tests."""
@@ -100,17 +107,20 @@ class TestGetProviderResolution(unittest.TestCase):
     def test_unknown_provider_name_returns_none(self):
         self.assertIsNone(sq_fx.get_provider(name="nonexistent-provider"))
 
+    @unittest.skipUnless(_ECB_INSTALLED, "sq-fx-ecb provider not installed")
     def test_default_resolves_to_ecb_when_sq_fx_ecb_installed(self):
         # sq_fx_ecb IS installed in this venv, so default resolution should work
         provider = sq_fx.get_provider()
         self.assertIsNotNone(provider)
         self.assertEqual(provider.__class__.__name__, "ECBProvider")
 
+    @unittest.skipUnless(_ECB_INSTALLED, "sq-fx-ecb provider not installed")
     def test_config_override_used_when_set(self):
         sq_config.set("fx_provider", "ecb")
         provider = sq_fx.get_provider()
         self.assertIsNotNone(provider)
 
+    @unittest.skipUnless(_ECB_INSTALLED, "sq-fx-ecb provider not installed")
     def test_available_lists_installed_providers(self):
         # sq-fx-ecb is in the venv; should appear in available()
         self.assertIn("ecb", sq_fx.available())
