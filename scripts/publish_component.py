@@ -36,10 +36,6 @@ DEFAULT_CONSTITUTION = Path(
 DEFAULT_TARGET_ROOT = Path(
     os.environ.get("SCIQNT_ORG_ROOT", Path.home() / "Projects/sciqnt-org"))
 
-# Every graduated component is tagged this during the transition, so a sibling
-# git-ref dependency pins an IMMUTABLE ref (not a moving branch).
-TRANSITION_REF = os.environ.get("SCIQNT_TRANSITION_REF", "v0.1.0")
-
 
 class Spec:
     """One component's publish recipe: where its code/tests live in the mono and
@@ -61,18 +57,30 @@ class Spec:
         self.package_data = list(package_data)    # non-.py files shipped IN the package
         self.version = version            # stamped into the standalone dist (transition)
 
+    @property
+    def tag(self) -> str:
+        """The git tag this component is shipped at — DERIVED from its version, so
+        the tag a dependent pins always matches the code's declared version (one
+        source: Spec.version)."""
+        return f"v{self.version}"
+
     def render_deps(self, pin: str) -> list[str]:
         """Full dependency list: third-party verbatim + each sibling sciqnt dep
         pinned per `pin`. During the transition (`git`) siblings resolve from
-        their GitHub repo at TRANSITION_REF; flip to `pypi` once published."""
+        their GitHub repo at the sibling's own version tag; flip to `pypi` once
+        published. Raises a clear error if a sciqnt_dep names an unknown component
+        (reachability — catches a typo'd or unshipped sibling at generate time)."""
         out = list(self.dependencies)
         for short in self.sciqnt_deps:
+            if short not in SPECS:
+                raise SystemExit(f"{self.repo}: unknown sciqnt_dep '{short}' "
+                                 f"(not in SPECS — typo, or not yet specced?)")
             sib = SPECS[short]
             if pin == "pypi":
                 out.append(f"{sib.dist}>=0.1,<0.2")
-            else:  # git-ref (transitional)
+            else:  # git-ref (transitional): point at the sibling's version tag
                 out.append(f"{sib.dist} @ git+https://github.com/sciqnt/"
-                           f"{sib.repo}@{TRANSITION_REF}")
+                           f"{sib.repo}@{sib.tag}")
         return out
 
 
@@ -163,7 +171,10 @@ SPECS = {
 }
 
 # Split order — siblings must exist + be tagged before a dependent's git-ref
-# verify can resolve them (topological by sciqnt_deps).
+# verify can resolve them (topological by sciqnt_deps). NOTE: sq-schema (the hub)
+# is deliberately NOT here — it shipped in Phase 2 and is republished on its own
+# (`publish_component.py sq-schema`). After a CONTRACT change, re-ship + re-tag the
+# hub FIRST, then re-run the tiers (whose leaves pin it by git-ref).
 TIERS = [
     ["sq-fmt", "sq-config", "sq-price-store"],
     ["sq-compute", "sq-performance", "sq-market-data", "sq-fx", "sq-secrets"],
@@ -382,10 +393,15 @@ def publish(name: str, target_root: Path, constitution: Path,
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("component", choices=sorted(SPECS) + ["--all"], nargs="?",
+    ap.add_argument("component", choices=sorted(SPECS), nargs="?",
                     help="component to publish (or pass --all to do every tier in order)")
     ap.add_argument("--all", action="store_true",
-                    help="publish every component in dependency-tier order")
+                    help="generate every component in dependency-tier order. NOTE: with "
+                         "the default --pin git + verify, this assumes each sibling's "
+                         "version tag ALREADY exists on GitHub — true for steady-state "
+                         "re-generation, NOT a cold first publish (a tier-N verify fetches "
+                         "tier-(N-1) by git-ref). Cold bootstrap: ship tier-by-tier "
+                         "(push+tag between tiers), or use --no-verify.")
     ap.add_argument("--target-root", type=Path, default=DEFAULT_TARGET_ROOT,
                     help="dir that holds the per-component repo checkouts "
                          "($SCIQNT_ORG_ROOT)")
