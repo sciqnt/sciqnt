@@ -17,6 +17,10 @@ component-world split (the package graduates to `sciqnt/sq-schema`).
   fails CI if code and golden drift. Regenerate: `python -m sq_schema.json_schema --write`.
 - **Single-source version.** `sq_schema.__version__` is the one source; the
   package version is read from it (`pyproject` `dynamic = ["version"]`).
+- **Determinism bound.** The golden is reproducible only against a stable
+  JSON-Schema generator, so `pydantic` is pinned `>=2.5,<3`. A pydantic MAJOR
+  bump may change the serialization and require regenerating the golden (the
+  drift test prints the exact command); that is a deliberate, reviewed step.
 - **Public surface frozen for downstreams** (`__all__`): `Account`, `Instrument`,
   `Position`, `CashBalance`, `ClosedLot`, `FxRate`, `NewsItem`, `Price`,
   `Transaction`, `PortfolioSnapshot`, the `AssetClass`/`TransactionType` enums,
