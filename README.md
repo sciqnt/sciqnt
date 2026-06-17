@@ -33,17 +33,34 @@ any screenshot or doc, ever.*
 
 ## Install
 
+Requires **Python ≥ 3.10**. The app pulls its component libraries (the
+`sciqnt/sq-*` repos) automatically.
+
 ```sh
-git clone https://github.com/sciqnt/sciqnt && cd sciqnt
-python3 -m venv .venv && .venv/bin/pip install pydantic prompt-toolkit keyring
-./bin/sciqnt install        # adds `sciqnt` to your PATH
-sciqnt                      # the interactive home (demo portfolio until you connect)
+pip install "git+https://github.com/sciqnt/sciqnt"   # the whole stack, one command
+sciqnt                                                # interactive home (demo portfolio until you connect)
 ```
 
-PyPI packages (`uv tool install sciqnt`, `pip install sciqnt-degiro`, …) are
-coming with the first tagged release. macOS note: use a Python built
-against modern OpenSSL (e.g. Homebrew `python@3.13`) — the system Python's
-LibreSSL is fragile against financial-API TLS.
+…or isolated as a tool:
+
+```sh
+uv tool install "git+https://github.com/sciqnt/sciqnt"   # or: pipx install "git+https://github.com/sciqnt/sciqnt"
+```
+
+> **PyPI** (`pip install sciqnt`) is being published — until every component
+> dist is up, prefer the `git+https://…` form above. Connectors are added at
+> runtime, not installed here: `sciqnt modules add owner/repo`.
+
+**Develop on the app itself:**
+
+```sh
+git clone https://github.com/sciqnt/sciqnt && cd sciqnt
+python3 -m venv .venv && .venv/bin/pip install -e .   # pulls the component libs by git-ref
+.venv/bin/sciqnt
+```
+
+macOS note: use a Python built against modern OpenSSL (e.g. Homebrew
+`python@3.13`) — the system Python's LibreSSL is fragile against financial-API TLS.
 
 ## What you get
 
