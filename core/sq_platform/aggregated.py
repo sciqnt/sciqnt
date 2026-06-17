@@ -1662,10 +1662,18 @@ def _history_status(brokers):
             continue
         ends = max(t.executed_at for t in txns).date()
         age = _export_age_days(b.broker)
+        # Staleness ("re-export to refresh") only applies to CSV-EXPORT connectors
+        # (those with a drop dir): their data ages with the file. A connector that
+        # returns LIVE history — an API broker, or the synthetic demo — has no file
+        # to refresh, so an old last-transaction just means "no recent activity",
+        # not stale. Never nag those.
+        has_export = callable(getattr(mod, "history_dir", None))
         if age is not None:
             state = "stale" if age > 7 else "ok"
-        else:
+        elif has_export:
             state = "stale" if ends < today - timedelta(days=7) else "ok"
+        else:
+            state = "ok"
         out.append((b.broker, state, ends))
     return out
 
