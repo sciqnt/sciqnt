@@ -36,6 +36,11 @@ dependencies = [
     "sciqnt-aggregator @ git+https://github.com/sciqnt/sq-aggregator@v0.1.0",
     "sciqnt-skills @ git+https://github.com/sciqnt/sq-skills@v0.1.0",
     "sciqnt-agents @ git+https://github.com/sciqnt/sq-agents@v0.1.0",
+    # Default FX provider (ECB — free, no-auth public reference data). Ships with
+    # the app so multi-currency portfolios convert out of the box; without it the
+    # aggregate total + history can't compute a base-currency value. Override via
+    # `sciqnt config set fx_provider <name>`.
+    "sciqnt-fx-ecb @ git+https://github.com/sciqnt/sq-fx-ecb@v0.1.0",
     # Interactive surface.
     "prompt-toolkit",
     "questionary",
