@@ -994,7 +994,13 @@ def run_home(root, *, use_snapshot_cache: bool = True) -> int:
         _demo = next((b for b in brokers if b.ok
                       and b.broker.split(":")[0] == "demo"), None)
         if _demo is not None:
-            who = (_demo.snapshot.account.display_name or "the demo").replace(" (demo)", "")
+            who = "the demo"
+            try:                                   # name the persona, not a broker
+                import sq_demo
+                _p = sq_demo.current_persona()
+                who = f"{_p['name']} {_p['emoji']}"
+            except Exception:                      # noqa: BLE001 — any failure → generic
+                pass
             head.append(("   ⚠ Recommended: Connect a broker account to see your "
                          "Portfolio.", sq_tui.SEP))
             head_styles.append("warn")
