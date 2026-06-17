@@ -41,6 +41,10 @@ dependencies = [
     # aggregate total + history can't compute a base-currency value. Override via
     # `sciqnt config set fx_provider <name>`.
     "sciqnt-fx-ecb @ git+https://github.com/sciqnt/sq-fx-ecb@v0.1.0",
+    # Default market-data provider (Yahoo — free, no-auth, broad incl. EU/crypto).
+    # Ships with the app so holdings price live out of the box (the demo personas
+    # and any real connector). Override/extend via `sciqnt modules add`.
+    "sciqnt-yahoo @ git+https://github.com/sciqnt/sq-yahoo@v0.1.0",
     # Interactive surface.
     "prompt-toolkit",
     "questionary",
