@@ -1999,8 +1999,20 @@ def _stale_warning(ends) -> str:
         if d >= today - _td(days=7):
             continue                       # recent activity → certainly current
         age = _export_age_days(b)
-        if age is not None and age <= 7:
-            continue                       # files freshly synced → current,
+        if age is not None:
+            if age <= 7:
+                continue                   # files freshly synced → current
+        else:
+            # No export files: only a CSV-export connector can be "stale". A live
+            # connector (API broker / synthetic demo) has nothing to re-export.
+            broker, _ = _broker_label_split(b)
+            try:
+                mod = importlib.import_module("sq_" + broker.replace("-", "_"))
+                live = not callable(getattr(mod, "history_dir", None))
+            except Exception:              # noqa: BLE001
+                live = True
+            if live:
+                continue
         stale.append(f"{b} export ends {d.isoformat()}")  # just a quiet account
     if not stale:
         return ""
