@@ -990,14 +990,16 @@ def run_home(root, *, use_snapshot_cache: bool = True) -> int:
         warnings = [ag.account_problem_text(b) for b in failed]
         head, head_styles, toggle, installed = _agent_rows("home", warnings)
         # Demo mode is never mistakable for real money: a warning-coloured
-        # recommendation to connect a real account, naming the current persona.
+        # recommendation (prominent) + a dim detail line naming the persona.
         _demo = next((b for b in brokers if b.ok
                       and b.broker.split(":")[0] == "demo"), None)
         if _demo is not None:
             who = (_demo.snapshot.account.display_name or "the demo").replace(" (demo)", "")
-            head.append((f"   ⚠ DEMO mode (dummy data) — you're viewing {who}. "
-                         f"Recommended: connect a broker account to see yours",
-                         sq_tui.SEP))
+            head.append(("   ⚠ Recommended: Connect a broker account to see your "
+                         "Portfolio.", sq_tui.SEP))
+            head_styles.append("warn")
+            head.append((f"     DEMO mode (dummy data) — you're viewing “{who}” "
+                         f"Demo Portfolio.", sq_tui.SEP))
             head_styles.append("warn")
         # Agent → app push channel: unseen insights surface ONCE on the
         # home (then marked seen). The ✦ row is plain fact — text + who
